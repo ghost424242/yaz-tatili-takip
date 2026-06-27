@@ -7,7 +7,7 @@ from datetime import datetime
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
-# --- CSS İLE GÖRSELLEŞTİRME ---
+# --- CSS İLE GÖRSELLEŞTİRME (Şifre Önerisini Engelleme Maskesi Eklendi) ---
 st.markdown("""
     <style>
     .main { background-color: #f7f9fc; }
@@ -16,6 +16,12 @@ st.markdown("""
     .ozet-kutu { padding: 12px; border-radius: 10px; background-color: white; border-left: 5px solid #ff823a; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05); }
     .edit-box { background-color: #f0f4f8; padding: 12px; border-radius: 10px; margin-top: 10px; border: 1px dashed #ff823a; }
     
+    /* ⚠️ TARAYICILARI ALDATAN VE ŞİFRE ÖNERİSİNİ ENGELLEYEN GİZLİ SİHİRLİ CSS KODU */
+    input[aria-label*="Giriş Kodu"], input[aria-label*="Giriş Anahtarın"] {
+        -webkit-text-security: disc !important; /* Yazılan karakterleri tarayıcı seviyesinde siyah noktalara (●) dönüştürür */
+        text-security: disc !important;
+    }
+
     /* MOBİL İÇİN BUTON BOYUTLANDIRMALARI */
     .stButton > button, .stFormSubmitButton > button {
         background-color: #ff823a !important;
@@ -144,8 +150,8 @@ if st.session_state.login_status is None:
     giris_rolu = st.selectbox("Lütfen Giriş Panelini Seçin:", ["Öğrenci Girişi 🎒", "Öğretmen Girişi 🎓"])
     
     if giris_rolu == "Öğretmen Girişi 🎓":
-        # Tarayıcıların "Şifre/Password" algısını kırmak ve güçlü şifre önerisini kapatmak için başlık değiştirildi ve autocomplete pasif kılındı.
-        pw = st.text_input("Giriş Kodu (Öğretmen)", type="password", key="teacher_pw_input", help="Lütfen öğretmen kodunuzu girin.")
+        # YENİLİK: type="password" kaldırıldı, düz metin yapıldı. Şifreyi yukarıdaki CSS maskesi noktalara dönüştürerek gizleyecek.
+        pw = st.text_input("Giriş Kodu (Öğretmen)", key="teacher_pw_input", help="Lütfen öğretmen kodunuzu girin.")
         if st.button("Öğretmen Paneline Giriş Yap"):
             if pw == "1234":
                 st.session_state.login_status = "teacher"
@@ -158,8 +164,8 @@ if st.session_state.login_status is None:
             st.warning("Sistemde henüz kayıtlı öğrenci yok.")
         else:
             secilen_ogr = st.selectbox("Adını Seç", ogr_listesi, key="student_name_select")
-            # "Şifren" kelimesi yerine "Giriş Anahtarın" yazılarak mobil tarayıcıların otomatik hesap oluşturma ekranı tetiklemesi engellendi.
-            ogr_pw = st.text_input("Giriş Anahtarın", type="password", key="student_pw_input", help="Sana verilen özel kodu gir.")
+            # YENİLİK: type="password" kaldırıldı. Böylece Google şifre kaydedici/önerici alanları asla tetiklenmeyecek.
+            ogr_pw = st.text_input("Giriş Anahtarın", key="student_pw_input", help="Sana verilen özel kodu gir.")
             if st.button("Öğrenci Paneline Giriş Yap"):
                 if data["ogrenciler"][secilen_ogr]["sifre"] == ogr_pw:
                     st.session_state.login_status = "student"
@@ -443,7 +449,6 @@ elif st.session_state.login_status == "teacher":
         for isim in list(data["ogrenciler"].keys()):
             icerik = data["ogrenciler"][isim]
             yeni_isim = st.text_input("Öğrenci Adı", value=isim, key=f"edit_name_{isim}")
-            # Yönetim listesindeki şifre düzenleme alanlarının da kafası karışmasın diye label isimleri optimize edildi.
             yeni_sifre = st.text_input("Giriş Kodu", value=icerik['sifre'], key=f"edit_pw_{isim}")
             c1, c2 = st.columns(2)
             with c1:
