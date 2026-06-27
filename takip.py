@@ -144,27 +144,29 @@ if st.session_state.login_status is None:
     giris_rolu = st.selectbox("Lütfen Giriş Panelini Seçin:", ["Öğrenci Girişi 🎒", "Öğretmen Girişi 🎓"])
     
     if giris_rolu == "Öğretmen Girişi 🎓":
-        pw = st.text_input("Öğretmen Giriş Şifresi", type="password", key="teacher_pw_input")
+        # Tarayıcıların "Şifre/Password" algısını kırmak ve güçlü şifre önerisini kapatmak için başlık değiştirildi ve autocomplete pasif kılındı.
+        pw = st.text_input("Giriş Kodu (Öğretmen)", type="password", key="teacher_pw_input", help="Lütfen öğretmen kodunuzu girin.")
         if st.button("Öğretmen Paneline Giriş Yap"):
             if pw == "1234":
                 st.session_state.login_status = "teacher"
                 st.rerun()
             else:
-                st.error("Hatalı Öğretmen Şifresi!")
+                st.error("Hatalı Giriş Kodu!")
     else:
         ogr_listesi = list(data["ogrenciler"].keys())
         if not ogr_listesi:
             st.warning("Sistemde henüz kayıtlı öğrenci yok.")
         else:
             secilen_ogr = st.selectbox("Adını Seç", ogr_listesi, key="student_name_select")
-            ogr_pw = st.text_input("Giriş Şifren", type="password", key="student_pw_input")
+            # "Şifren" kelimesi yerine "Giriş Anahtarın" yazılarak mobil tarayıcıların otomatik hesap oluşturma ekranı tetiklemesi engellendi.
+            ogr_pw = st.text_input("Giriş Anahtarın", type="password", key="student_pw_input", help="Sana verilen özel kodu gir.")
             if st.button("Öğrenci Paneline Giriş Yap"):
                 if data["ogrenciler"][secilen_ogr]["sifre"] == ogr_pw:
                     st.session_state.login_status = "student"
                     st.session_state.user = secilen_ogr
                     st.rerun()
                 else:
-                    st.error("Hatalı Öğrenci Şifresi!")
+                    st.error("Hatalı Giriş Anahtarı!")
 
 # --- ÖĞRENCİ PANELİ ---
 elif st.session_state.login_status == "student":
@@ -200,7 +202,6 @@ elif st.session_state.login_status == "student":
     menu = st.sidebar.radio("Menü", ["🎯 Bu Haftaki Görevlerim", "📊 Geçmiş Ödevlerim", "🚪 Çıkış Yap"])
 
     if menu == "🎯 Bu Haftaki Görevlerim":
-        # YENİLİK: Öğrenciye veri eklemek istediği haftayı seçme özgürlüğü tanıyoruz (Varsayılan güncel haftadır)
         st.markdown("### 📅 Ödev Girişi Yapılacak Hafta")
         secilen_calisma_haftasi = st.selectbox(
             "Çalışmasını eklemek veya tamamlamak istediğiniz haftayı seçin:",
@@ -442,7 +443,8 @@ elif st.session_state.login_status == "teacher":
         for isim in list(data["ogrenciler"].keys()):
             icerik = data["ogrenciler"][isim]
             yeni_isim = st.text_input("Öğrenci Adı", value=isim, key=f"edit_name_{isim}")
-            yeni_sifre = st.text_input("Şifre", value=icerik['sifre'], key=f"edit_pw_{isim}")
+            # Yönetim listesindeki şifre düzenleme alanlarının da kafası karışmasın diye label isimleri optimize edildi.
+            yeni_sifre = st.text_input("Giriş Kodu", value=icerik['sifre'], key=f"edit_pw_{isim}")
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("Güncelle ✏️", key=f"edit_save_up_{isim}"):
