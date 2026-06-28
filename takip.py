@@ -7,7 +7,7 @@ from datetime import datetime
 # --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
-# --- CSS İLE GÖRSELLEŞTİRME (Şifre Önerisini Engelleme Maskesi Eklendi) ---
+# --- CSS İLE GÖRSELLEŞTİRME ---
 st.markdown("""
     <style>
     .main { background-color: #f7f9fc; }
@@ -16,10 +16,30 @@ st.markdown("""
     .ozet-kutu { padding: 12px; border-radius: 10px; background-color: white; border-left: 5px solid #ff823a; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05); }
     .edit-box { background-color: #f0f4f8; padding: 12px; border-radius: 10px; margin-top: 10px; border: 1px dashed #ff823a; }
     
-    /* ⚠️ TARAYICILARI ALDATAN VE ŞİFRE ÖNERİSİNİ ENGELLEYEN GİZLİ SİHİRLİ CSS KODU */
-    input[aria-label*="Giriş Kodu"], input[aria-label*="Giriş Anahtarın"] {
-        -webkit-text-security: disc !important; /* Yazılan karakterleri tarayıcı seviyesinde siyah noktalara (●) dönüştürür */
-        text-security: disc !important;
+    /* 🔔 MESAJ BİLDİRİM STİLLERİ */
+    .mesaj-uyari {
+        background-color: #f39c12 !important;
+        color: white !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+        text-align: center !important;
+        margin-bottom: 15px !important;
+        animation: blink 2s infinite !important;
+    }
+    .mesaj-kutusu {
+        background-color: white !important;
+        padding: 15px !important;
+        border-radius: 10px !important;
+        border-left: 5px solid #3498db !important;
+        margin-bottom: 10px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+    }
+    @keyframes blink {
+        0% { opacity: 0.85; }
+        50% { opacity: 1; background-color: #e67e22; }
+        100% { opacity: 0.85; }
     }
 
     /* MOBİL İÇİN BUTON BOYUTLANDIRMALARI */
@@ -85,9 +105,12 @@ DB_FILE = "veri.json"
 
 def veri_yukle():
     if not os.path.exists(DB_FILE):
-        return {"ogrenciler": {}, "ayarlar": {"tatil_baslangic": "2026-06-15"}}
+        return {"ogrenciler": {}, "ayarlar": {"tatil_baslangic": "2026-06-15"}, "genel_mesajlar": []}
     with open(DB_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        db = json.load(f)
+        if "genel_mesajlar" not in db:
+            db["genel_mesajlar"] = []
+        return db
 
 def veri_kaydet(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
@@ -95,7 +118,7 @@ def veri_kaydet(data):
 
 data = veri_yukle()
 
-# --- SABİT KİTAP İSİMLERİ ANA LİSTESİ ---
+# --- SABİT KİTAP İSİMLERİ ---
 KITAP_ISIMLERI = [
     "10 Fasikül 10 Hafta",
     "Yaz Testim ve Problemler",
@@ -103,7 +126,6 @@ KITAP_ISIMLERI = [
     "Bilsem'e Hazırlık"
 ]
 
-# --- HAFTA HESAPLAMA ---
 def hafta_hesapla(baslangic_str):
     try:
         baslangic = datetime.strptime(baslangic_str, "%Y-%m-%d")
@@ -114,7 +136,6 @@ def hafta_hesapla(baslangic_str):
 
 su_anki_hafta = hafta_hesapla(data["ayarlar"]["tatil_baslangic"])
 
-# --- HAFTANIN YILDIZI KONTROLÜ ---
 def haftalik_durum_hesapla(ogr_veri, hafta_no):
     h_str = str(hafta_no)
     if h_str not in ogr_veri.get("ilerleme", {}):
@@ -143,6 +164,8 @@ if 'secilen_detay_ogrenci' not in st.session_state:
     st.session_state.secilen_detay_ogrenci = None
 if 'ogretmen_alt_menu' not in st.session_state:
     st.session_state.ogretmen_alt_menu = "📊 Haftalık Özet Raporu"
+if 'hizli_mesaj_onay' not in st.session_state:
+    st.session_state.hizli_mesaj_onay = False
 
 # --- GİRİŞ EKRANI ---
 if st.session_state.login_status is None:
@@ -150,8 +173,7 @@ if st.session_state.login_status is None:
     giris_rolu = st.selectbox("Lütfen Giriş Panelini Seçin:", ["Öğrenci Girişi 🎒", "Öğretmen Girişi 🎓"])
     
     if giris_rolu == "Öğretmen Girişi 🎓":
-        # YENİLİK: type="password" kaldırıldı, düz metin yapıldı. Şifreyi yukarıdaki CSS maskesi noktalara dönüştürerek gizleyecek.
-        pw = st.text_input("Giriş Kodu (Öğretmen)", key="teacher_pw_input", help="Lütfen öğretmen kodunuzu girin.")
+        pw = st.text_input("Giriş Kodu (Öğretmen)", key="teacher_pw_input")
         if st.button("Öğretmen Paneline Giriş Yap"):
             if pw == "1234":
                 st.session_state.login_status = "teacher"
@@ -164,8 +186,7 @@ if st.session_state.login_status is None:
             st.warning("Sistemde henüz kayıtlı öğrenci yok.")
         else:
             secilen_ogr = st.selectbox("Adını Seç", ogr_listesi, key="student_name_select")
-            # YENİLİK: type="password" kaldırıldı. Böylece Google şifre kaydedici/önerici alanları asla tetiklenmeyecek.
-            ogr_pw = st.text_input("Giriş Anahtarın", key="student_pw_input", help="Sana verilen özel kodu gir.")
+            ogr_pw = st.text_input("Giriş Anahtarın", key="student_pw_input")
             if st.button("Öğrenci Paneline Giriş Yap"):
                 if data["ogrenciler"][secilen_ogr]["sifre"] == ogr_pw:
                     st.session_state.login_status = "student"
@@ -179,11 +200,18 @@ elif st.session_state.login_status == "student":
     ogr_adi = st.session_state.user
     ogr_veri = data["ogrenciler"][ogr_adi]
     
-    if "ilerleme" not in ogr_veri:
-        ogr_veri["ilerleme"] = {}
+    if "ilerleme" not in ogr_veri: ogr_veri["ilerleme"] = {}
+    if "mesajlar" not in ogr_veri: ogr_veri["mesajlar"] = []
 
     st.title(f"Hoş geldin, {ogr_adi}! 🎉")
     
+    if 'mesaj_okundu' not in st.session_state:
+        st.session_state.mesaj_okundu = False
+        
+    toplam_mesaj_sayisi = len(data["genel_mesajlar"]) + len(ogr_veri["mesajlar"])
+    if toplam_mesaj_sayisi > 0 and not st.session_state.mesaj_okundu:
+        st.markdown(f"<div class='mesaj-uyari'>✉️ Öğretmeninizden Yeni Mesajınız Var! Sol menüden 'Mesajlar' bölümüne bakın.</div>", unsafe_allow_html=True)
+
     if st.session_state.kutlama == "balon":
         st.balloons()
         st.session_state.kutlama = None
@@ -203,17 +231,12 @@ elif st.session_state.login_status == "student":
         else: yildizlar += "🤍"
     
     st.markdown(f"<div class='yildiz-seridi'>{yildizlar}</div>", unsafe_allow_html=True)
-    st.info(f"📅 Bugün tatilin **{su_anki_hafta}. haftasındayız.**")
-
-    menu = st.sidebar.radio("Menü", ["🎯 Bu Haftaki Görevlerim", "📊 Geçmiş Ödevlerim", "🚪 Çıkış Yap"])
+    
+    menu = st.sidebar.radio("Menü", ["🎯 Bu Haftaki Görevlerim", "📊 Geçmiş Ödevlerim", f"✉️ Mesajlar ({toplam_mesaj_sayisi})", "🚪 Çıkış Yap"])
 
     if menu == "🎯 Bu Haftaki Görevlerim":
         st.markdown("### 📅 Ödev Girişi Yapılacak Hafta")
-        secilen_calisma_haftasi = st.selectbox(
-            "Çalışmasını eklemek veya tamamlamak istediğiniz haftayı seçin:",
-            list(range(1, 11)),
-            index=su_anki_hafta-1
-        )
+        secilen_calisma_haftasi = st.selectbox("Çalışmasını eklemek veya tamamlamak istediğiniz haftayı seçin:", list(range(1, 11)), index=su_anki_hafta-1)
         
         h_str = str(secilen_calisma_haftasi)
         if h_str not in ogr_veri["ilerleme"]:
@@ -236,50 +259,37 @@ elif st.session_state.login_status == "student":
         st.divider()
 
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
-        st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
-        
         with st.form("kitap_form", clear_on_submit=True):
             k_ad = st.text_input("Okuduğun Kitabın Adı")
             k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50)
             k_foto = st.file_uploader("📝 Okuma Defteri Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"])
-            
             if st.form_submit_button("Kitap Girişini Kaydet"):
                 if k_ad:
                     foto_b64 = ""
-                    if k_foto is not None:
-                        foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8')
-                    current_data["kitaplar"].append({
-                        "ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())
-                    })
+                    if k_foto is not None: foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8')
+                    current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
                     veri_kaydet(data)
                     st.session_state.kutlama = "kar"
                     st.rerun()
 
         if current_data["kitaplar"]:
             for idx, k in enumerate(current_data["kitaplar"]):
-                col_m1, col_m2 = st.columns([3, 1])
-                with col_m1: st.caption(f"📖 {k['ad']} ({k['sayfa']} S.)")
-                with col_m2:
-                    if st.button("Sil 🗑️", key=f"sil_k_{idx}"):
-                        current_data["kitaplar"].pop(idx)
-                        veri_kaydet(data)
-                        st.rerun()
+                if st.button(f"Sil 🗑️: {k['ad']}", key=f"sil_k_{idx}"):
+                    current_data["kitaplar"].pop(idx)
+                    veri_kaydet(data)
+                    st.rerun()
 
         st.divider()
 
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
-        st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
-        
         with st.form("deyim_form", clear_on_submit=True):
             d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"])
             d_ad = st.text_input("Deyim / Atasözü Adı")
             d_foto = st.file_uploader("📝 Defter Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"])
-            
             if st.form_submit_button("Deyimi Kaydet"):
                 if d_ad:
                     dfoto_b64 = ""
-                    if d_foto is not None:
-                        dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8')
+                    if d_foto is not None: dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8')
                     current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
                     veri_kaydet(data)
                     st.session_state.kutlama = "kar"
@@ -287,13 +297,10 @@ elif st.session_state.login_status == "student":
 
         if current_data["deyimler"]:
             for idx, d in enumerate(current_data["deyimler"]):
-                col_md1, col_md2 = st.columns([3, 1])
-                with col_md1: st.caption(f"💡 {d['ad']} ({d.get('tur','Deyim')})")
-                with col_md2:
-                    if st.button("Sil 🗑️", key=f"sil_d_{idx}"):
-                        current_data["deyimler"].pop(idx)
-                        veri_kaydet(data)
-                        st.rerun()
+                if st.button(f"Sil 🗑️: {d['ad']}", key=f"sil_d_{idx}"):
+                    current_data["deyimler"].pop(idx)
+                    veri_kaydet(data)
+                    st.rerun()
 
     elif menu == "📊 Geçmiş Ödevlerim":
         st.subheader("🔍 Tüm Girişlerin")
@@ -304,53 +311,49 @@ elif st.session_state.login_status == "student":
                     ogr_veri["ilerleme"].pop(h_str)
                     veri_kaydet(data)
                     st.rerun()
-                
                 f_durum = ogr_veri["ilerleme"][h_str].get("fasikuller", [False]*4)
-                st.markdown("**Fasikül Durumları:**")
                 for f_idx, b_dur in enumerate(f_durum):
-                    dur_yazisi = "✅ Tamamlandı" if b_dur else "❌ Yapılmadı"
-                    st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: {dur_yazisi}")
-                
-                if ogr_veri["ilerleme"][h_str].get("kitaplar"):
-                    st.markdown("**Okunan Kitaplar:**")
-                    for k in ogr_veri["ilerleme"][h_str]["kitaplar"]:
-                        st.write(f"- 📖 {k['ad']}")
-                        if k.get("foto"): st.image(base64.b64decode(k["foto"]), width=120)
-                if ogr_veri["ilerleme"][h_str].get("deyimler"):
-                    st.markdown("**Öğrenilen Deyimler:**")
-                    for d in ogr_veri["ilerleme"][h_str]["deyimler"]:
-                        st.write(f"- 💡 {d['ad']}")
-                        if d.get("foto"): st.image(base64.b64decode(d["foto"]), width=120)
+                    st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: {'✅ Tamamlandı' if b_dur else '❌ Yapılmadı'}")
+
+    elif menu.startswith("✉️ Mesajlar"):
+        st.session_state.mesaj_okundu = True
+        st.subheader("✉️ Öğretmeninizden Gelen Mesajlar")
+        if data["genel_mesajlar"]:
+            st.markdown("#### 📢 Sınıf Duyuruları")
+            for m in reversed(data["genel_mesajlar"]):
+                st.markdown(f"<div class='mesaj-kutusu'><b>📅 Tarih:</b> {m['tarih']}<br><b>💬 Mesaj:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
+        if ogr_veri["mesajlar"]:
+            st.markdown("#### 🔒 Sana Özel Hatırlatmalar")
+            for m in reversed(ogr_veri["mesajlar"]):
+                st.markdown(f"<div class='mesaj-kutusu' style='border-left-color: #e67e22;'><b>📅 Tarih:</b> {m['tarih']}<br><b>💬 Mesaj:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
+        if not data["genel_mesajlar"] and not ogr_veri["mesajlar"]:
+            st.info("Henüz size gönderilmiş bir mesaj bulunmuyor.")
 
     elif menu == "🚪 Çıkış Yap":
         st.session_state.login_status = None
+        st.session_state.mesaj_okundu = False
         st.rerun()
 
 # --- ÖĞRETMEN PANELİ ---
 elif st.session_state.login_status == "teacher":
     st.title("🎓 Öğretmen Yönetim Paneli")
-    
     st.sidebar.header("⚙️ Sistem Ayarları")
     t_baslangic = st.sidebar.date_input("Yaz Tatili Başlangıç Tarihi", value=datetime.strptime(data["ayarlar"]["tatil_baslangic"], "%Y-%m-%d"))
     if str(t_baslangic) != data["ayarlar"]["tatil_baslangic"]:
         data["ayarlar"]["tatil_baslangic"] = str(t_baslangic)
-        veri_kaydet(data)
-        st.rerun()
+        veri_kaydet(data); st.rerun()
         
-    menu = st.sidebar.radio("İşlem Menüsü", [
-        "📊 Haftalık Özet Raporu", 
-        "🔍 Öğrenci Detaylı Analizi", 
-        "📋 Sınıf Listesi & Şifreler", 
-        "➕ Toplu Öğrenci Ekle", 
-        "🚪 Çıkış Yap"
-    ], index=["📊 Haftalık Özet Raporu", "🔍 Öğrenci Detaylı Analizi", "📋 Sınıf Listesi & Şifreler", "➕ Toplu Öğrenci Ekle", "🚪 Çıkış Yap"].index(st.session_state.ogretmen_alt_menu))
+    menu = st.sidebar.radio("İşlem Menüsü", ["📊 Haftalık Özet Raporu", "🔍 Öğrenci Detaylı Analizi", "✉️ Mesaj Gönderme Paneli", "📋 Sınıf Listesi & Şifreler", "➕ Toplu Öğrenci Ekle", "🚪 Çıkış Yap"], index=["📊 Haftalık Özet Raporu", "🔍 Öğrenci Detaylı Analizi", "✉️ Mesaj Gönderme Paneli", "📋 Sınıf Listesi & Şifreler", "➕ Toplu Öğrenci Ekle", "🚪 Çıkış Yap"].index(st.session_state.ogretmen_alt_menu))
     
+    # Sekme değiştikçe hızlı mesaj onayını temizleme kontrolü
+    if menu != st.session_state.ogretmen_alt_menu:
+        st.session_state.hizli_mesaj_onay = False
+        
     st.session_state.ogretmen_alt_menu = menu
 
     if menu == "📊 Haftalık Özet Raporu":
         st.subheader("📈 Sınıf Haftalık Durum Özeti")
         secilen_rapor_haftasi = st.selectbox("Hafta Seç", list(range(1, 11)), index=su_anki_hafta-1)
-        
         y_list, yar_list, h_list = [], [], []
         for ogr, v in data["ogrenciler"].items():
             durum = haftalik_durum_hesapla(v, secilen_rapor_haftasi)
@@ -358,92 +361,80 @@ elif st.session_state.login_status == "teacher":
             elif durum == "yarim": yar_list.append(ogr)
             else: h_list.append(ogr)
             
-        st.write("💡 *Öğrencinin ödev detaylarını incelemek için ismine tıklayabilirsiniz:*")
-        
         st.success(f"⭐ **Haftanın Yıldızları ({len(y_list)}):**")
         for o in y_list:
             if st.button(f"✅ {o}", key=f"lnk_y_{o}"):
                 st.session_state.secilen_detay_ogrenci = o
-                st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"
-                st.rerun()
-                
+                st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"; st.rerun()
         st.warning(f"💔 **Eksik Görevi Olanlar ({len(yar_list)}):**")
         for o in yar_list:
             if st.button(f"⚠️ {o}", key=f"lnk_yar_{o}"):
                 st.session_state.secilen_detay_ogrenci = o
-                st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"
-                st.rerun()
-                
+                st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"; st.rerun()
         st.error(f"🤍 **Hiç Giriş Yapmayanlar ({len(h_list)}):**")
         for o in h_list:
             if st.button(f"❌ {o}", key=f"lnk_h_{o}"):
                 st.session_state.secilen_detay_ogrenci = o
-                st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"
-                st.rerun()
+                st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"; st.rerun()
+
+    elif menu == "✉️ Mesaj Gönderme Paneli":
+        st.subheader("✉️ Öğrenci Mesaj ve Hatırlatma Yönetimi")
+        mesaj_hedefi = st.selectbox("Mesaj Kimlere Gitsin?", ["Tüm Sınıfa (Genel Duyuru) 📢", "Belirli Bir Öğrenciye Özel 🔒"])
+        mesaj_metni = st.text_area("Mesajınızı veya Hatırlatmanızı Yazın:", placeholder="Sevgili çocuklar...", height=150)
+        if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒":
+            hedef_ogr = st.selectbox("Mesajı Alacak Öğrenciyi Seçin:", list(data["ogrenciler"].keys()))
+            
+        if st.button("Mesajı Gönder", key="mass_send_msg_btn"):
+            if mesaj_metni.strip():
+                zaman_damgasi = datetime.now().strftime("%d.%m.%Y %H:%M")
+                yeni_mesaj_obj = {"tarih": zaman_damgasi, "mesaj": mesaj_metni.strip()}
+                if mesaj_hedefi.startswith("Tüm Sınıfa"):
+                    data["genel_mesajlar"].append(yeni_mesaj_obj)
+                    st.success("Mesaj tüm sınıfın ekranına başarıyla gönderildi! 📢")
+                else:
+                    if "mesajlar" not in data["ogrenciler"][hedef_ogr]: data["ogrenciler"][hedef_ogr]["mesajlar"] = []
+                    data["ogrenciler"][hedef_ogr]["mesajlar"].append(yeni_mesaj_obj)
+                    st.success(f"Özel hatırlatma başarıyla {hedef_ogr} isimli öğrenciye gönderildi! 🔒")
+                veri_kaydet(data)
+            else: st.error("Lütfen boş mesaj göndermeyin!")
 
     elif menu == "🔍 Öğrenci Detaylı Analizi":
         st.subheader("🔍 Öğrenci Girişleri Ayrıntılı İnceleme")
         ogr_secenekleri = list(data["ogrenciler"].keys())
-        
         if ogr_secenekleri:
             default_idx = 0
-            if st.session_state.secilen_detay_ogrenci in ogr_secenekleri:
+            if st.session_state.secilen_detay_ogrenci in ogr_secenekleri: 
                 default_idx = ogr_secenekleri.index(st.session_state.secilen_detay_ogrenci)
-                
+            
+            # Öğrenci değiştirdiğinde eski onay yazısı silinsin
             secilen_detay_ogr = st.selectbox("İncelenecek Öğrenciyi Seçin", ogr_secenekleri, index=default_idx)
-            st.session_state.secilen_detay_ogrenci = secilen_detay_ogr
-            
+            if secilen_detay_ogr != st.session_state.secilen_detay_ogrenci:
+                st.session_state.hizli_mesaj_onay = False
+                st.session_state.secilen_detay_ogrenci = secilen_detay_ogr
+                st.rerun()
+                
             o_veri = data["ogrenciler"][secilen_detay_ogr]
-            st.markdown(f"### 📋 {secilen_detay_ogr} - Detaylı Çalışma Geçmişi")
             
-            if "ilerleme" not in o_veri or not o_veri["ilerleme"]:
-                st.info("Bu öğrenci henüz tatil boyunca hiçbir veri girişi yapmadı.")
-            else:
-                for h_no in sorted([int(x) for x in o_veri["ilerleme"].keys()]):
-                    h_str = str(h_no)
-                    with st.expander(f"📅 {h_no}. Hafta Kayıtları", expanded=False):
-                        if st.button("Haftayı Komple Sil 🗑️", key=f"t_komple_sil_{h_str}"):
-                            o_veri["ilerleme"].pop(h_str)
-                            veri_kaydet(data)
-                            st.rerun()
-                            
-                        detay_h_veri = o_veri["ilerleme"][h_str]
-                        
-                        st.write("**📚 Kitap Fasikül Durumları:**")
-                        f_dur = detay_h_veri.get("fasikuller", [False]*4)
-                        for f_idx, b_dur in enumerate(f_dur):
-                            isaret = "✅ Tamamlandı" if b_dur else "❌ Yapılmadı"
-                            st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: **{isaret}**")
-                            
-                        st.write("**📚 Okunan Kitap Ödev Defterleri:**")
-                        if detay_h_veri.get("kitaplar"):
-                            for k_idx, k in enumerate(detay_h_veri["kitaplar"]):
-                                col_t1, col_t2 = st.columns([3, 1])
-                                with col_t1:
-                                    st.write(f"- {k['ad']} ({k['sayfa']} Sayfa)")
-                                    if k.get("foto"): st.image(base64.b64decode(k["foto"]), width=280)
-                                with col_t2:
-                                    if st.button("Sil 🗑️", key=f"sil_t_k_{h_str}_{k_idx}"):
-                                        detay_h_veri["kitaplar"].pop(k_idx)
-                                        veri_kaydet(data)
-                                        st.rerun()
-                        else:
-                            st.caption("Kitap girilmemiş.")
-                            
-                        st.write("**🗣️ Öğrenilen Deyim Defterleri:**")
-                        if detay_h_veri.get("deyimler"):
-                            for d_idx, d in enumerate(detay_h_veri["deyimler"]):
-                                col_td1, col_td2 = st.columns([3, 1])
-                                with col_td1:
-                                    st.write(f"- **{d['ad']}** ({d.get('tur','Deyim')})")
-                                    if d.get("foto"): st.image(base64.b64decode(d["foto"]), width=280)
-                                with col_td2:
-                                    if st.button("Sil 🗑️", key=f"sil_t_d_{h_str}_{d_idx}"):
-                                        detay_h_veri["deyimler"].pop(d_idx)
-                                        veri_kaydet(data)
-                                        st.rerun()
-                        else:
-                            st.caption("Deyim girilmemiş.")
+            # 🔄 KALICI ONAY SİSTEMİ: Hafızada True ise yeşil onay kutusunu en üstte gösterir
+            if st.session_state.hizli_mesaj_onay:
+                st.success(f"📬 Özel hatırlatma başarıyla {secilen_detay_ogr} isimli öğrenciye gönderildi! 🔒")
+            
+            st.markdown(f"##### ✉️ {secilen_detay_ogr} Öğrencisine Hızlı Mesaj")
+            hizli_msg = st.text_input("Mesaj metni yazıp Enter'a basın:", key=f"quick_msg_{secilen_detay_ogr}")
+            if st.button("Hızlı Mesajı İlet", key=f"quick_btn_{secilen_detay_ogr}"):
+                if hizli_msg.strip():
+                    if "mesajlar" not in o_veri: o_veri["mesajlar"] = []
+                    o_veri["mesajlar"].append({"tarih": datetime.now().strftime("%d.%m.%Y %H:%M"), "mesaj": hizli_msg.strip()})
+                    veri_kaydet(data)
+                    st.session_state.hizli_mesaj_onay = True # Hafızaya alıp kalıcı yapıyoruz
+                    st.rerun()
+
+            for h_no in sorted([int(x) for x in o_veri.get("ilerleme", {}).keys()]):
+                h_str = str(h_no)
+                with st.expander(f"📅 {h_no}. Hafta Kayıtları"):
+                    detay_h_veri = o_veri["ilerleme"][h_str]
+                    f_dur = detay_h_veri.get("fasikuller", [False]*4)
+                    for f_idx, b_dur in enumerate(f_dur): st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: {'✅ Tamamlandı' if b_dur else '❌ Yapılmadı'}")
 
     elif menu == "📋 Sınıf Listesi & Şifreler":
         for isim in list(data["ogrenciler"].keys()):
@@ -454,17 +445,12 @@ elif st.session_state.login_status == "teacher":
             with c1:
                 if st.button("Güncelle ✏️", key=f"edit_save_up_{isim}"):
                     if yeni_isim != isim:
-                        data["ogrenciler"][yeni_isim] = {"sifre": yeni_sifre, "ilerleme": icerik["ilerleme"]}
+                        data["ogrenciler"][yeni_isim] = {"sifre": yeni_sifre, "ilerleme": icerik.get("ilerleme",{}), "mesajlar": icerik.get("mesajlar",[])}
                         data["ogrenciler"].pop(isim)
-                    else:
-                        data["ogrenciler"][isim]["sifre"] = yeni_sifre
-                    veri_kaydet(data)
-                    st.rerun()
+                    else: data["ogrenciler"][isim]["sifre"] = yeni_sifre
+                    veri_kaydet(data); st.rerun()
             with c2:
-                if st.button("Öğrenciyi Sil ❌", key=f"sil_btn_del_{isim}"):
-                    data["ogrenciler"].pop(isim)
-                    veri_kaydet(data)
-                    st.rerun()
+                if st.button("Öğrenciyi Sil ❌", key=f"sil_btn_del_{isim}"): data["ogrenciler"].pop(isim); veri_kaydet(data); st.rerun()
 
     elif menu == "➕ Toplu Öğrenci Ekle":
         yeni_liste = st.text_area("Örnek: Ahmet Yılmaz,123")
@@ -473,12 +459,11 @@ elif st.session_state.login_status == "teacher":
                 for satir in yeni_liste.split("\n"):
                     if "," in satir:
                         isim, sifre = satir.split(",")
-                        data["ogrenciler"][isim.strip()] = {"sifre": sifre.strip(), "ilerleme": {}}
-                veri_kaydet(data)
-                st.success("Sınıf listesi eklendi!")
-                st.rerun()
+                        data["ogrenciler"][isim.strip()] = {"sifre": sifre.strip(), "ilerleme": {}, "mesajlar": []}
+                veri_kaydet(data); st.success("Sınıf listesi eklendi!"); st.rerun()
 
     elif menu == "🚪 Çıkış Yap":
         st.session_state.login_status = None
         st.session_state.secilen_detay_ogrenci = None
+        st.session_state.hizli_mesaj_onay = False
         st.rerun()
