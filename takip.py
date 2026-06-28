@@ -174,7 +174,7 @@ if st.session_state.login_status is None:
     
     if giris_rolu == "Öğretmen Girişi 🎓":
         pw = st.text_input("Giriş Kodu (Öğretmen)", key="teacher_pw_input")
-        if st.button("Öğretmen Paneline Giriş Yap"):
+        if st.button("Giriş Yap", key="save_teacher_login"):
             if pw == "1234":
                 st.session_state.login_status = "teacher"
                 st.rerun()
@@ -187,7 +187,7 @@ if st.session_state.login_status is None:
         else:
             secilen_ogr = st.selectbox("Adını Seç", ogr_listesi, key="student_name_select")
             ogr_pw = st.text_input("Giriş Anahtarın", key="student_pw_input")
-            if st.button("Öğrenci Paneline Giriş Yap"):
+            if st.button("Giriş Yap", key="save_student_login"):
                 if data["ogrenciler"][secilen_ogr]["sifre"] == ogr_pw:
                     st.session_state.login_status = "student"
                     st.session_state.user = secilen_ogr
@@ -220,7 +220,7 @@ elif st.session_state.login_status == "student":
         st.session_state.kutlama = None
 
     su_anki_hafta_durumu = haftalik_durum_hesapla(ogr_veri, su_anki_hafta)
-    if su_anki_hafta_durumu == "yildiz":
+    if su_anki_status := su_anki_hafta_durumu == "yildiz":
         st.success(f"⭐ **Tebrikler! {su_anki_hafta}. Hafta görevlerini başarıyla tamamladın ve Haftanın Yıldızı oldun!** ⭐")
 
     yildizlar = ""
@@ -258,7 +258,9 @@ elif st.session_state.login_status == "student":
 
         st.divider()
 
+        # --- KİTAP EKLEME VE DÜZENLEME (Butonlar Geri Getirildi) ---
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
+        st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
         with st.form("kitap_form", clear_on_submit=True):
             k_ad = st.text_input("Okuduğun Kitabın Adı")
             k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50)
@@ -274,14 +276,36 @@ elif st.session_state.login_status == "student":
 
         if current_data["kitaplar"]:
             for idx, k in enumerate(current_data["kitaplar"]):
-                if st.button(f"Sil 🗑️: {k['ad']}", key=f"sil_k_{idx}"):
-                    current_data["kitaplar"].pop(idx)
-                    veri_kaydet(data)
-                    st.rerun()
+                c_k1, c_k2, c_k3 = st.columns([3, 1, 1])
+                with c_k1: st.write(f"📖 {k['ad']} ({k['sayfa']} S.)")
+                with c_k2:
+                    if st.button("Düzenle ✏️", key=f"edit_k_btn_{idx}"):
+                        st.session_state[f"editing_k_now_{idx}"] = True
+                with c_k3:
+                    if st.button("Sil 🗑️", key=f"sil_k_{idx}"):
+                        current_data["kitaplar"].pop(idx)
+                        veri_kaydet(data); st.rerun()
+                
+                if st.session_state.get(f"editing_k_now_{idx}", False):
+                    with st.container():
+                        st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
+                        yeni_k_ad = st.text_input("Yeni Kitap Adı", value=k['ad'], key=f"new_kad_{idx}")
+                        yeni_k_sayfa = st.number_input("Yeni Sayfa Sayısı", min_value=1, value=k['sayfa'], key=f"new_ksayfa_{idx}")
+                        yeni_k_foto = st.file_uploader("Yeni Defter Sayfası Fotoğrafı", type=["jpg", "jpeg", "png"], key=f"new_kfoto_{idx}")
+                        if st.button("Değişiklikleri Kaydet", key=f"edit_save_k_change_{idx}"):
+                            current_data["kitaplar"][idx]["ad"] = yeni_k_ad
+                            current_data["kitaplar"][idx]["sayfa"] = yeni_k_sayfa
+                            if yeni_k_foto is not None: current_data["kitaplar"][idx]["foto"] = base64.b64encode(yeni_k_foto.read()).decode('utf-8')
+                            veri_kaydet(data)
+                            st.session_state[f"editing_k_now_{idx}"] = False
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
 
         st.divider()
 
+        # --- DEYİM EKLEME VE DÜZENLEME (Butonlar Geri Getirildi) ---
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
+        st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
         with st.form("deyim_form", clear_on_submit=True):
             d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"])
             d_ad = st.text_input("Deyim / Atasözü Adı")
@@ -297,10 +321,30 @@ elif st.session_state.login_status == "student":
 
         if current_data["deyimler"]:
             for idx, d in enumerate(current_data["deyimler"]):
-                if st.button(f"Sil 🗑️: {d['ad']}", key=f"sil_d_{idx}"):
-                    current_data["deyimler"].pop(idx)
-                    veri_kaydet(data)
-                    st.rerun()
+                c_d1, c_d2, c_d3 = st.columns([3, 1, 1])
+                with c_d1: st.write(f"💡 {d['ad']} ({d.get('tur','Deyim')})")
+                with c_d2:
+                    if st.button("Düzenle ✏️", key=f"edit_d_btn_{idx}"):
+                        st.session_state[f"editing_d_now_{idx}"] = True
+                with c_d3:
+                    if st.button("Sil 🗑️", key=f"sil_d_{idx}"):
+                        current_data["deyimler"].pop(idx)
+                        veri_kaydet(data); st.rerun()
+                        
+                if st.session_state.get(f"editing_d_now_{idx}", False):
+                    with st.container():
+                        st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
+                        yeni_d_tur = st.selectbox("Yeni Tür", ["Deyim", "Atasözü"], index=0 if d.get('tur','Deyim')=="Deyim" else 1, key=f"new_dtur_{idx}")
+                        yeni_d_ad = st.text_input("Yeni Adı", value=d['ad'], key=f"new_dad_{idx}")
+                        yeni_d_foto = st.file_uploader("Yeni Defter Fotoğrafı", type=["jpg", "jpeg", "png"], key=f"new_dfoto_{idx}")
+                        if st.button("Değişiklikleri Kaydet", key=f"edit_save_d_change_{idx}"):
+                            current_data["deyimler"][idx]["tur"] = yeni_d_tur
+                            current_data["deyimler"][idx]["ad"] = yeni_d_ad
+                            if yeni_d_foto is not None: current_data["deyimler"][idx]["foto"] = base64.b64encode(yeni_d_foto.read()).decode('utf-8')
+                            veri_kaydet(data)
+                            st.session_state[f"editing_d_now_{idx}"] = False
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
 
     elif menu == "📊 Geçmiş Ödevlerim":
         st.subheader("🔍 Tüm Girişlerin")
@@ -309,11 +353,37 @@ elif st.session_state.login_status == "student":
             with st.expander(f"📅 {h_no}. Hafta Detayları", expanded=False):
                 if st.button(f"🚨 {h_no}. Haftayı Komple Sil", key=f"komple_sil_{h_str}"):
                     ogr_veri["ilerleme"].pop(h_str)
-                    veri_kaydet(data)
-                    st.rerun()
-                f_durum = ogr_veri["ilerleme"][h_str].get("fasikuller", [False]*4)
+                    veri_kaydet(data); st.rerun()
+                
+                h_veri = ogr_veri["ilerleme"][h_str]
+                
+                # Fasiküller
+                f_durum = h_veri.get("fasikuller", [False]*4)
+                st.markdown("**📚 Kitap Fasikül Durumları:**")
                 for f_idx, b_dur in enumerate(f_durum):
                     st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: {'✅ Tamamlandı' if b_dur else '❌ Yapılmadı'}")
+                
+                st.write("") # Boşluk
+                
+                # 🛠️ GÜNCELLEME: ÖĞRENCİ GEÇMİŞ EKRANINA KİTAPLAR VE DEFTER FOTOĞRAFLARI EKLENDİ
+                st.markdown("**📚 Okunan Kitap Ödev Defterleri:**")
+                if h_veri.get("kitaplar"):
+                    for k in h_veri["kitaplar"]:
+                        st.write(f"- 📖 **{k['ad']}** ({k['sayfa']} Sayfa)")
+                        if k.get("foto"): st.image(base64.b64decode(k["foto"]), width=280)
+                else:
+                    st.caption("Bu hafta okunan kitap kaydı girilmemiş.")
+                
+                st.write("") # Boşluk
+                
+                # 🛠️ GÜNCELLEME: ÖĞRENCİ GEÇMİŞ EKRANINA DEYİMLER VE DEFTER FOTOĞRAFLARI EKLENDİ
+                st.markdown("**🗣️ Öğrenilen Deyim / Atasözü Defterleri:**")
+                if h_veri.get("deyimler"):
+                    for d in h_veri["deyimler"]:
+                        st.write(f"- 💡 **{d['ad']}** ({d.get('tur','Deyim')})")
+                        if d.get("foto"): st.image(base64.b64decode(d["foto"]), width=280)
+                else:
+                    st.caption("Bu hafta deyim veya atasözü kaydı girilmemiş.")
 
     elif menu.startswith("✉️ Mesajlar"):
         st.session_state.mesaj_okundu = True
@@ -401,8 +471,7 @@ elif st.session_state.login_status == "teacher":
         ogr_secenekleri = list(data["ogrenciler"].keys())
         if ogr_secenekleri:
             default_idx = 0
-            if st.session_state.secilen_detay_ogrenci in ogr_secenekleri: 
-                default_idx = ogr_secenekleri.index(st.session_state.secilen_detay_ogrenci)
+            if st.session_state.secilen_detay_ogrenci in ogr_secenekleri: default_idx = ogr_secenekleri.index(st.session_state.secilen_detay_ogrenci)
             
             secilen_detay_ogr = st.selectbox("İncelenecek Öğrenciyi Seçin", ogr_secenekleri, index=default_idx)
             if secilen_detay_ogr != st.session_state.secilen_detay_ogrenci:
@@ -430,52 +499,43 @@ elif st.session_state.login_status == "teacher":
                 with st.expander(f"📅 {h_no}. Hafta Kayıtları", expanded=True):
                     if st.button("Haftayı Komple Sil 🗑️", key=f"t_komple_sil_{h_str}"):
                         o_veri["ilerleme"].pop(h_str)
-                        veri_kaydet(data)
-                        st.rerun()
+                        veri_kaydet(data); st.rerun()
                         
                     detay_h_veri = o_veri["ilerleme"][h_str]
                     
-                    # 1. FASİKÜL DÖKÜMÜ
                     st.write("**📚 Kitap Fasikül Durumları:**")
                     f_dur = detay_h_veri.get("fasikuller", [False]*4)
-                    for f_idx, b_dur in enumerate(f_dur): 
-                        st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: {'✅ Tamamlandı' if b_dur else '❌ Yapılmadı'}")
+                    for f_idx, b_dur in enumerate(f_dur): st.write(f"- {KITAP_ISIMLERI[f_idx]} {h_no}. Fasikül: {'✅ Tamamlandı' if b_dur else '❌ Yapılmadı'}")
                     
-                    st.write("") # Boşluk
+                    st.write("")
                     
-                    # 🛠️ GÜNCELLEME: KİTAP OKUMA DEFTERİ RESİMLERİ VE BİLGİLERİ EKLENDİ
                     st.write("**📚 Okunan Kitap Ödev Defterleri:**")
                     if detay_h_veri.get("kitaplar"):
                         for k_idx, k in enumerate(detay_h_veri["kitaplar"]):
                             col_t1, col_t2 = st.columns([3, 1])
                             with col_t1:
                                 st.write(f"- 📖 **{k['ad']}** ({k['sayfa']} Sayfa)")
-                                if k.get("foto"): 
-                                    st.image(base64.b64decode(k["foto"]), width=320)
+                                if k.get("foto"): st.image(base64.b64decode(k["foto"]), width=320)
                             with col_t2:
                                 if st.button("Sil 🗑️", key=f"sil_t_k_{h_str}_{k_idx}"):
                                     detay_h_veri["kitaplar"].pop(k_idx)
                                     veri_kaydet(data); st.rerun()
-                    else:
-                        st.caption("Bu hafta okunan kitap kaydı girilmemiş.")
+                    else: st.caption("Bu hafta okunan kitap kaydı girilmemiş.")
                         
-                    st.write("") # Boşluk
+                    st.write("")
                     
-                    # 🛠️ GÜNCELLEME: DEYİM VE ATASÖZÜ DEFTERİ RESİMLERİ VE BİLGİLERİ EKLENDİ
                     st.write("**🗣️ Öğrenilen Deyim / Atasözü Defterleri:**")
                     if detay_h_veri.get("deyimler"):
                         for d_idx, d in enumerate(detay_h_veri["deyimler"]):
                             col_td1, col_td2 = st.columns([3, 1])
                             with col_td1:
                                 st.write(f"- 💡 **{d['ad']}** ({d.get('tur','Deyim')})")
-                                if d.get("foto"): 
-                                    st.image(base64.b64decode(d["foto"]), width=320)
+                                if d.get("foto"): st.image(base64.b64decode(d["foto"]), width=320)
                             with col_td2:
                                 if st.button("Sil 🗑️", key=f"sil_t_d_{h_str}_{d_idx}"):
                                     detay_h_veri["deyimler"].pop(d_idx)
                                     veri_kaydet(data); st.rerun()
-                    else:
-                        st.caption("Bu hafta deyim veya atasözü kaydı girilmemiş.")
+                    else: st.caption("Bu hafta deyim veya atasözü kaydı girilmemiş.")
 
     elif menu == "📋 Sınıf Listesi & Şifreler":
         for isim in list(data["ogrenciler"].keys()):
