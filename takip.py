@@ -18,7 +18,11 @@ def veri_yukle():
         try:
             req = urllib.request.Request(API_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req) as response:
-                st.session_state.canli_bulut_db = json.loads(response.read().decode('utf-8'))
+                ham_veri = response.read().decode('utf-8').strip()
+                # 🛡️ BULUT KORUMASI: Google Sheets formül hataları ürettiyse temizle
+                if "#" in ham_veri or "Error" in ham_veri or not ham_veri:
+                    raise Exception("BozukVeri")
+                st.session_state.canli_bulut_db = json.loads(ham_veri)
         except:
             st.session_state.canli_bulut_db = {"ogrenciler": {}, "ayarlar": {"tatil_baslangic": "2026-06-15"}, "genel_mesajlar": []}
     return st.session_state.canli_bulut_db
@@ -58,7 +62,7 @@ def haftalik_durum_hesapla(ogr_veri, hafta_no):
         return "hiç yok"
     
     hafta = ogr_veri["ilerleme"][h_str]
-    fasikul_tam = all(text_fasikul := hafta.get("fasikuller", [False]*4))
+    fasikul_tam = all(hafta.get("fasikuller", [False]*4))
     kitap_tam = len(hafta.get("kitaplar", [])) >= 2
     deyim_tam = len(hafta.get("deyimler", [])) >= 3
     
@@ -157,7 +161,7 @@ elif st.session_state.login_status == "student":
         f1 = st.checkbox(f"{KITAP_ISIMLERI[0]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][0])
         f2 = st.checkbox(f"{KITAP_ISIMLERI[1]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][1])
         f3 = st.checkbox(f"{KITAP_ISIMLERI[2]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][2])
-        f4 = st.checkbox(f"{KITAP_ISIMLERI[3]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][3])
+        f4 = st.checkbox(f"{KITAP_ISIMLMERI[3] if len(KITAP_ISIMLERI)>3 else 'Fasikül 4'} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][3])
         
         if st.button("Fasikül Durumunu Kaydet", key="fasikul_save_btn"):
             current_data["fasikuller"] = [f1, f2, f3, f4]
@@ -173,15 +177,13 @@ elif st.session_state.login_status == "student":
         
         if st.button("Kitap Girişini Kaydet 💾", key="kitap_save_direct_btn"):
             if k_ad:
-                # 🛠️ GÜNCELLEME 1: İlk kayıtta fotoğraf zorunluluğu
                 if k_foto is not None:
                     foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8')
                     current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
                     veri_kaydet(data)
                     st.session_state.kutlama = "kar"
                     st.rerun()
-                else:
-                    st.error("⚠️ Lütfen defter sayfasının fotoğrafını ekleyin!")
+                else: st.error("⚠️ Lütfen defter sayfasının fotoğrafını ekleyin!")
             else: st.error("Lütfen kitap adını boş bırakmayın!")
 
         if current_data["kitaplar"]:
@@ -198,7 +200,6 @@ elif st.session_state.login_status == "student":
                         st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
                         yeni_k_ad = st.text_input("Yeni Kitap Adı", value=k['ad'], key=f"new_kad_{idx}")
                         yeni_k_sayfa = st.number_input("Yeni Sayfa Sayısı", min_value=1, value=k['sayfa'], key=f"new_ksayfa_{idx}")
-                        # 🛠️ GÜNCELLEME 2: Düzenleme alanına fotoğraf yükleyici eklendi
                         yeni_k_foto = st.file_uploader("Yeni Defter Sayfası Fotoğrafı (Değiştirmek istemiyorsanız boş bırakın)", type=["jpg", "jpeg", "png"], key=f"new_kfoto_up_{idx}")
                         
                         if st.button("Değişiklikleri Kaydet", key=f"edit_save_k_change_{idx}"):
@@ -221,15 +222,13 @@ elif st.session_state.login_status == "student":
         
         if st.button("Deyimi Kaydet 💾", key="deyim_save_direct_btn"):
             if d_ad:
-                # 🛠️ GÜNCELLEME 3: İlk kayıtta fotoğraf zorunluluğu
                 if d_foto is not None:
                     dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8')
                     current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
                     veri_kaydet(data)
                     st.session_state.kutlama = "kar"
                     st.rerun()
-                else:
-                    st.error("⚠️ Lütfen defter sayfasının fotoğrafını ekleyin!")
+                else: st.error("⚠️ Lütfen defter sayfasının fotoğrafını ekleyin!")
             else: st.error("Lütfen deyim veya atasözü adını boş bırakmayın!")
 
         if current_data["deyimler"]:
@@ -246,7 +245,6 @@ elif st.session_state.login_status == "student":
                         st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
                         yeni_d_tur = st.selectbox("Yeni Tür", ["Deyim", "Atasözü"], index=0 if d.get('tur','Deyim')=="Deyim" else 1, key=f"new_dtur_{idx}")
                         yeni_d_ad = st.text_input("Yeni Adı", value=d['ad'], key=f"new_dad_{idx}")
-                        # 🛠️ GÜNCELLEME 4: Düzenleme alanına fotoğraf yükleyici eklendi
                         yeni_d_foto = st.file_uploader("Yeni Defter Fotoğrafı (Değiştirmek istemiyorsanız boş bırakın)", type=["jpg", "jpeg", "png"], key=f"new_dfoto_up_{idx}")
                         
                         if st.button("Değişiklikleri Kaydet", key=f"edit_save_d_change_{idx}"):
@@ -331,30 +329,42 @@ elif st.session_state.login_status == "teacher":
                 veri_kaydet(data); st.success("Mesaj başarıyla iletildi!")
 
     elif menu == "🔍 Öğrenci Detaylı Analizi":
-        secilen_detay_ogr = st.selectbox("İncelenecek Öğrenciyi Seçin", list(data["ogrenciler"].keys()))
-        o_veri = data["ogrenciler"][secilen_detay_ogr]
-        if st.session_state.hizli_mesaj_onay: st.success("📬 Özel hatırlatma başarıyla gönderildi! 🔒")
-        hizli_msg = st.text_input("Hızlı Mesaj:")
-        if st.button("Hızlı Mesajı İlet"):
-            if hizli_msg.strip():
-                o_veri["mesajlar"].append({"tarih": datetime.now().strftime("%d.%m.%Y %H:%M"), "mesaj": hizli_msg.strip()})
-                veri_kaydet(data); st.session_state.hizli_mesaj_onay = True; st.rerun()
-        for h_no in sorted([int(x) for x in o_veri.get("ilerleme", {}).keys()]):
-            with st.expander(f"📅 {h_no}. Hafta Kayıtları", expanded=True):
-                detay_h_veri = o_veri["ilerleme"][str(h_no)]
-                for f_idx, b_dur in enumerate(detay_h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
+        ogr_secenekleri = list(data["ogrenciler"].keys())
+        if ogr_secenekleri:
+            default_idx = 0
+            if st.session_state.secilen_detay_ogrenci in ogr_secenekleri: 
+                default_idx = ogr_secenekleri.index(st.session_state.secilen_detay_ogrenci)
+            
+            secilen_detay_ogr = st.selectbox("İncelenecek Öğrenciyi Seçin", ogr_secenekleri, index=default_idx)
+            if secilen_detay_ogr != st.session_state.secilen_detay_ogrenci:
+                st.session_state.hizli_mesaj_onay = False
+                st.session_state.secilen_detay_ogrenci = secilen_detay_ogr
+                st.rerun()
                 
-                for k in detay_h_veri.get("kitaplar", []):
-                    st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)")
-                    if k.get("foto"):
-                        try: st.image(base64.b64decode(k["foto"]), width=320)
-                        except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
-                        
-                for d in detay_h_veri.get("deyimler", []):
-                    st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})")
-                    if d.get("foto"):
-                        try: st.image(base64.b64decode(d["foto"]), width=320)
-                        except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
+            o_veri = data["ogrenciler"][secilen_detay_ogr]
+            if st.session_state.hizli_mesaj_onay: st.success("📬 Özel hatırlatma başarıyla gönderildi! 🔒")
+            hizli_msg = st.text_input("Hızlı Mesaj:")
+            if st.button("Hızlı Mesajı İlet"):
+                if hizli_msg.strip():
+                    o_veri["mesajlar"].append({"tarih": datetime.now().strftime("%d.%m.%Y %H:%M"), "mesaj": hizli_msg.strip()})
+                    veri_kaydet(data); st.session_state.hizli_mesaj_onay = True; st.rerun()
+                    
+            for h_no in sorted([int(x) for x in o_veri.get("ilerleme", {}).keys()]):
+                with st.expander(f"📅 {h_no}. Hafta Kayıtları", expanded=True):
+                    detay_h_veri = o_veri["ilerleme"][str(h_no)]
+                    for f_idx, b_dur in enumerate(detay_h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
+                    
+                    for k in detay_h_veri.get("kitaplar", []):
+                        st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)")
+                        if k.get("foto"):
+                            try: st.image(base64.b64decode(k["foto"]), width=320)
+                            except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
+                            
+                    for d in detay_h_veri.get("deyimler", []):
+                        st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})")
+                        if d.get("foto"):
+                            try: st.image(base64.b64decode(d["foto"]), width=320)
+                            except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
 
     elif menu == "📋 Sınıf Listesi & Şifreler":
         for isim in list(data["ogrenciler"].keys()):
