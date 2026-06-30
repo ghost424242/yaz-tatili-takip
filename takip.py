@@ -138,7 +138,7 @@ elif st.session_state.login_status == "student":
     if st.session_state.kutlama == "balon": st.balloons(); st.session_state.kutlama = None
     elif st.session_state.kutlama == "kar": st.snow(); st.session_state.kutlama = None
 
-    if haftalik_durum_hesapla(ogr_veri, su_anki_transform := su_anki_hafta) == "yildiz":
+    if haftalik_durum_hesapla(ogr_veri, su_anki_hafta) == "yildiz":
         st.success(f"⭐ **Tebrikler! {su_anki_hafta}. Hafta görevlerini başarıyla tamamladın ve Haftanın Yıldızı oldun!** ⭐")
 
     yildizlar = "".join(["⭐" if haftalik_durum_hesapla(ogr_veri, h) == "yildiz" else "💔" if haftalik_durum_hesapla(ogr_veri, h) == "yarim" else "🤍" for h in range(1, 11)])
@@ -206,6 +206,7 @@ elif st.session_state.login_status == "student":
         if st.button("Deyimi Kaydet 💾", key="deyim_save_direct_btn"):
             if d_ad:
                 dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto is not None else ""
+                # 🛠️ EN KRİTİK NOKTA DÜZELTİLDİ: "kitaplar" yerine doğru liste olan "deyimler" listesine append ediliyor!
                 current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
                 veri_kaydet(data)
                 st.session_state.kutlama = "kar"
