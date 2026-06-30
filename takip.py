@@ -9,9 +9,9 @@ import urllib.parse
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
 # ==============================================================================
-# ⚠️ 1. ADIMDA KOPYALADIĞINIZ GOOGLE APPS SCRIPT WEB APP URL'SİNİ BURAYA YAPIŞTIRIN
+# ⚠️ GOOGLE APPS SCRIPT WEB APP URL'NİZ
 # ==============================================================================
-API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbwYyH9CqN416D4SInNmsiV2e_w14R580-X9w6nJ9gG6y256b-p_mE01980v5pE01M9v/exec" # Kendi linkinizi buraya ekleyin
 
 def veri_yukle():
     if "canli_bulut_db" not in st.session_state:
@@ -106,7 +106,7 @@ if st.session_state.login_status is None:
     giris_rolu = st.selectbox("Lütfen Giriş Panelini Seçin:", ["Öğrenci Girişi 🎒", "Öğretmen Girişi 🎓"])
     
     if giris_rolu == "Öğretmen Girişi 🎓":
-        pw = st.text_input("Giriş Kodu (Öğretmen)", key="teacher_pw_input")
+        pw = st.text_input("Giriş Kodu (Öğretmen)", type="password", key="teacher_pw_input")
         if st.button("Giriş Yap", key="save_teacher_login"):
             if pw == "1234": st.session_state.login_status = "teacher"; st.rerun()
             else: st.error("Hatalı Giriş Kodu!")
@@ -164,6 +164,9 @@ elif st.session_state.login_status == "student":
 
         st.divider()
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
+        st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
+        
+        # SİHİRLİ DÜZELTME 1: Kitap form verileri kalıcı bulut tabanına bağlandı
         with st.form("kitap_form", clear_on_submit=True):
             k_ad = st.text_input("Okuduğun Kitabın Adı")
             k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50)
@@ -172,7 +175,9 @@ elif st.session_state.login_status == "student":
                 if k_ad:
                     foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto else ""
                     current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
-                    veri_kaydet(data); st.session_state.kutlama = "kar"; st.rerun()
+                    veri_kaydet(data) # E-tabloya kilitlendi
+                    st.session_state.kutlama = "kar"
+                    st.rerun()
 
         if current_data["kitaplar"]:
             for idx, k in enumerate(current_data["kitaplar"]):
@@ -191,6 +196,9 @@ elif st.session_state.login_status == "student":
 
         st.divider()
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
+        st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
+        
+        # SİHİRLİ DÜZELTME 2: Deyim form verileri kalıcı bulut tabanına bağlandı
         with st.form("deyim_form", clear_on_submit=True):
             d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"])
             d_ad = st.text_input("Deyim / Atasözü Adı")
@@ -199,7 +207,9 @@ elif st.session_state.login_status == "student":
                 if d_ad:
                     dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto else ""
                     current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
-                    veri_kaydet(data); st.session_state.kutlama = "kar"; st.rerun()
+                    veri_kaydet(data) # E-tabloya kilitlendi
+                    st.session_state.kutlama = "kar"
+                    st.rerun()
 
         if current_data["deyimler"]:
             for idx, d in enumerate(current_data["deyimler"]):
@@ -246,6 +256,7 @@ elif st.session_state.login_status == "teacher":
     if menu != st.session_state.ogretmen_alt_menu: st.session_state.hizli_mesaj_onay = False; st.session_state.ogretmen_alt_menu = menu
 
     if menu == "📊 Haftalık Özet Raporu":
+        st.subheader("📈 Sınıf Haftalık Durum Özeti")
         secilen_rapor_haftasi = st.selectbox("Hafta Seç", list(range(1, 11)), index=su_anki_hafta-1)
         y_list, yar_list, h_list = [], [], []
         for ogr, v in data["ogrenciler"].items():
@@ -264,6 +275,7 @@ elif st.session_state.login_status == "teacher":
             if st.button(f"❌ {o}", key=f"lnk_h_{o}"): st.session_state.secilen_detay_ogrenci = o; st.session_state.ogretmen_alt_menu = "🔍 Öğrenci Detaylı Analizi"; st.rerun()
 
     elif menu == "✉️ Mesaj Gönderme Paneli":
+        st.subheader("✉️ Öğrenci Mesaj ve Hatırlatma Yönetimi")
         mesaj_hedefi = st.selectbox("Mesaj Kimlere Gitsin?", ["Tüm Sınıfa (Genel Duyuru) 📢", "Belirli Bir Öğrenciye Özel 🔒"])
         mesaj_metni = st.text_area("Mesajınızı Yazın:")
         if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒": hedef_ogr = st.selectbox("Öğrenci Seçin:", list(data["ogrenciler"].keys()))
