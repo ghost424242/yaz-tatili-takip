@@ -206,7 +206,7 @@ elif st.session_state.login_status == "student":
         if st.button("Deyimi Kaydet 💾", key="deyim_save_direct_btn"):
             if d_ad:
                 dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto is not None else ""
-                # 🛠️ EN KRİTİK NOKTA DÜZELTİLDİ: "kitaplar" yerine doğru liste olan "deyimler" listesine append ediliyor!
+                # 🛠️ BURASI DÜZELTİLDİ: "kitaplar" listesi yerine artık doğru liste olan "deyimler" listesine ekleme yapıyor!
                 current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
                 veri_kaydet(data)
                 st.session_state.kutlama = "kar"
