@@ -19,7 +19,6 @@ def veri_yukle():
             req = urllib.request.Request(API_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req) as response:
                 ham_veri = response.read().decode('utf-8').strip()
-                # 🛡️ BULUT KORUMASI: Google Sheets formül hataları ürettiyse temizle
                 if "#" in ham_veri or "Error" in ham_veri or not ham_veri:
                     raise Exception("BozukVeri")
                 st.session_state.canli_bulut_db = json.loads(ham_veri)
@@ -161,7 +160,8 @@ elif st.session_state.login_status == "student":
         f1 = st.checkbox(f"{KITAP_ISIMLERI[0]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][0])
         f2 = st.checkbox(f"{KITAP_ISIMLERI[1]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][1])
         f3 = st.checkbox(f"{KITAP_ISIMLERI[2]} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][2])
-        f4 = st.checkbox(f"{KITAP_ISIMLMERI[3] if len(KITAP_ISIMLERI)>3 else 'Fasikül 4'} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][3])
+        # 🛠️ HARF HATASI DÜZELTİLDİ: KITAP_ISIMLMERI kelimesindeki fazla 'M' harfi silindi.
+        f4 = st.checkbox(f"{KITAP_ISIMLERI[3] if len(KITAP_ISIMLERI)>3 else 'Fasikül 4'} {secilen_calisma_haftasi}. F.", value=current_data["fasikuller"][3])
         
         if st.button("Fasikül Durumunu Kaydet", key="fasikul_save_btn"):
             current_data["fasikuller"] = [f1, f2, f3, f4]
