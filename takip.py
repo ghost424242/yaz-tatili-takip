@@ -9,7 +9,7 @@ import urllib.parse
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
 # ==============================================================================
-# ⚠️ GÜNCEL GOOGLE APPS SCRIPT WEB APP URL'NİZ
+# ⚠️ GOOGLE APPS SCRIPT WEB APP URL'NİZ
 # ==============================================================================
 API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
 
@@ -164,22 +164,24 @@ elif st.session_state.login_status == "student":
             veri_kaydet(data); st.session_state.kutlama = "balon"; st.rerun()
 
         st.divider()
+        
+        # 🛠️ GÜNCELLEME 1: Kitap yapısı form döngüsünden çıkarıldı, anlık tetiklemeye alındı
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
         st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
         
-        # 🛠️ GÜNCELLEME 1: Form içi kaydetme işlemi tamamen form dışı tetikleyici ile zırhlandı
-        with st.form("kitap_form", clear_on_submit=True):
-            k_ad = st.text_input("Okuduğun Kitabın Adı")
-            k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50)
-            k_foto = st.file_uploader("📝 Okuma Defteri Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"])
-            submit_kitap = st.form_submit_button("Kitap Girişini Kaydet")
-            
-        if submit_kitap and k_ad:
-            foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto is not None else ""
-            current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
-            veri_kaydet(data)
-            st.session_state.kutlama = "kar"
-            st.rerun()
+        k_ad = st.text_input("Okuduğun Kitabın Adı", key="k_ad_input_field")
+        k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50, key="k_sayfa_input_field")
+        k_foto = st.file_uploader("📝 Okuma Defteri Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"], key="k_foto_input_field")
+        
+        if st.button("Kitap Girişini Kaydet 💾", key="kitap_save_direct_btn"):
+            if k_ad:
+                foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto is not None else ""
+                current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
+                veri_kaydet(data)
+                st.session_state.kutlama = "kar"
+                st.rerun()
+            else:
+                st.error("Lütfen kitap adını boş bırakmayın!")
 
         if current_data["kitaplar"]:
             for idx, k in enumerate(current_data["kitaplar"]):
@@ -197,22 +199,24 @@ elif st.session_state.login_status == "student":
                         veri_kaydet(data); st.session_state[f"editing_k_now_{idx}"] = False; st.rerun()
 
         st.divider()
+        
+        # 🛠️ GÜNCELLEME 2: Deyim yapısı form döngüsünden çıkarıldı, anlık tetiklemeye alındı
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
         st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
         
-        # 🛠️ GÜNCELLEME 2: Form içi kaydetme işlemi tamamen form dışı tetikleyici ile zırhlandı
-        with st.form("deyim_form", clear_on_submit=True):
-            d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"])
-            d_ad = st.text_input("Deyim / Atasözü Adı")
-            d_foto = st.file_uploader("📝 Defter Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"])
-            submit_deyim = st.form_submit_button("Deyimi Kaydet")
-            
-        if submit_deyim and d_ad:
-            dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto is not None else ""
-            current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
-            veri_kaydet(data)
-            st.session_state.kutlama = "kar"
-            st.rerun()
+        d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"], key="d_tur_input_field")
+        d_ad = st.text_input("Deyim / Atasözü Adı", key="d_ad_input_field")
+        d_foto = st.file_uploader("📝 Defter Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"], key="d_foto_input_field")
+        
+        if st.button("Deyimi Kaydet 💾", key="deyim_save_direct_btn"):
+            if d_ad:
+                dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto is not None else ""
+                current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
+                veri_kaydet(data)
+                st.session_state.kutlama = "kar"
+                st.rerun()
+            else:
+                st.error("Lütfen deyim veya atasözü adını boş bırakmayın!")
 
         if current_data["deyimler"]:
             for idx, d in enumerate(current_data["deyimler"]):
@@ -236,8 +240,8 @@ elif st.session_state.login_status == "student":
                     ogr_veri["ilerleme"].pop(str(h_no)); veri_kaydet(data); st.rerun()
                 h_veri = ogr_veri["ilerleme"][str(h_no)]
                 for f_idx, b_dur in enumerate(h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
-                for k in h_veri.get("kitaplar", []): st.write(f"- 📖 **{k['ad']}**"); st.image(base64.b64decode(k["foto"]), width=280) if k.get("foto") else None
-                for d in h_veri.get("deyimler", []): st.write(f"- 💡 **{d['ad']}**"); st.image(base64.b64decode(d["foto"]), width=280) if d.get("foto") else None
+                for k in h_veri.get("kitaplar", []): st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)"); st.image(base64.b64decode(k["foto"]), width=280) if k.get("foto") else None
+                for d in h_veri.get("deyimler", []): st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})"); st.image(base64.b64decode(d["foto"]), width=280) if d.get("foto") else None
 
     elif menu.startswith("✉️ Mesajlar"):
         st.session_state.mesaj_okundu = True
@@ -281,7 +285,7 @@ elif st.session_state.login_status == "teacher":
         st.subheader("✉️ Öğrenci Mesaj ve Hatırlatma Yönetimi")
         mesaj_hedefi = st.selectbox("Mesaj Kimlere Gitsin?", ["Tüm Sınıfa (Genel Duyuru) 📢", "Belirli Bir Öğrenciye Özel 🔒"])
         mesaj_metni = st.text_area("Mesajınızı Yazın:")
-        if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒": hedef_ogr = st.selectbox("Öğrenci Seçin:", list(data["ogrenciler"].keys()))
+        if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒": {hedef_ogr = st.selectbox("Öğrenci Seçin:", list(data["ogrenciler"].keys()))}
         if st.button("Mesajı Gönder"):
             if mesaj_metni.strip():
                 obj = {"tarih": datetime.now().strftime("%d.%m.%Y %H:%M"), "mesaj": mesaj_metni.strip()}
@@ -302,8 +306,8 @@ elif st.session_state.login_status == "teacher":
             with st.expander(f"📅 {h_no}. Hafta Kayıtları", expanded=True):
                 detay_h_veri = o_veri["ilerleme"][str(h_no)]
                 for f_idx, b_dur in enumerate(detay_h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
-                for k in detay_h_veri.get("kitaplar", []): st.write(f"- 📖 **{k['ad']}**"); st.image(base64.b64decode(k["foto"]), width=320) if k.get("foto") else None
-                for d in detay_h_veri.get("deyimler", []): st.write(f"- 💡 **{d['ad']}**"); st.image(base64.b64decode(d["foto"]), width=320) if d.get("foto") else None
+                for k in detay_h_veri.get("kitaplar", []): st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)"); st.image(base64.b64decode(k["foto"]), width=320) if k.get("foto") else None
+                for d in detay_h_veri.get("deyimler", []): st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})"); st.image(base64.b64decode(d["foto"]), width=320) if d.get("foto") else None
 
     elif menu == "📋 Sınıf Listesi & Şifreler":
         for isim in list(data["ogrenciler"].keys()):
