@@ -11,7 +11,7 @@ st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="�
 # ==============================================================================
 # ⚠️ GOOGLE SHEETS KİMLİĞİNİZİ BURAYA YAPIŞTIRIN
 # ==============================================================================
-GOOGLE_SHEET_ID = "KENDI_GOOGLE_SHEETS_ID_BURAYA_YAZIN"
+GOOGLE_SHEET_ID = "1_YS6dlfZA9yBXTS7OgjvhAoUNmIQlYYV3AQBt7PUgcs"
 
 # Sıfır harici kütüphane ile Google Etabloya veri yazma ve okuma köprüsü
 def veri_yukle():
