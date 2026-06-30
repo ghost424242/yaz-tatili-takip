@@ -9,7 +9,7 @@ import urllib.parse
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
 # ==============================================================================
-# ⚠️ GOOGLE APPS SCRIPT WEB APP URL'NİZ
+# ⚠️ GÜNCEL GOOGLE APPS SCRIPT WEB APP URL'NİZ
 # ==============================================================================
 API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
 
@@ -59,8 +59,8 @@ def haftalik_durum_hesapla(ogr_veri, hafta_no):
     
     hafta = ogr_veri["ilerleme"][h_str]
     fasikul_tam = all(hafta.get("fasikuller", [False]*4))
-    kitap_tam = len(hafta.get("kitaplar", [])) >= 2
-    deyim_tam = len(hafta.get("deyimler", [])) >= 3
+    kitap_tam = len(headless_kitaplar := hafta.get("kitaplar", [])) >= 2
+    deyim_tam = len(headless_deyimler := hafta.get("deyimler", [])) >= 3
     
     if fasikul_tam and kitap_tam and deyim_tam:
         return "yildiz"
@@ -164,8 +164,6 @@ elif st.session_state.login_status == "student":
             veri_kaydet(data); st.session_state.kutlama = "balon"; st.rerun()
 
         st.divider()
-        
-        # 🛠️ GÜNCELLEME 1: Kitap yapısı form döngüsünden çıkarıldı, anlık tetiklemeye alındı
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
         st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
         
@@ -180,8 +178,7 @@ elif st.session_state.login_status == "student":
                 veri_kaydet(data)
                 st.session_state.kutlama = "kar"
                 st.rerun()
-            else:
-                st.error("Lütfen kitap adını boş bırakmayın!")
+            else: st.error("Lütfen kitap adını boş bırakmayın!")
 
         if current_data["kitaplar"]:
             for idx, k in enumerate(current_data["kitaplar"]):
@@ -199,8 +196,6 @@ elif st.session_state.login_status == "student":
                         veri_kaydet(data); st.session_state[f"editing_k_now_{idx}"] = False; st.rerun()
 
         st.divider()
-        
-        # 🛠️ GÜNCELLEME 2: Deyim yapısı form döngüsünden çıkarıldı, anlık tetiklemeye alındı
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
         st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
         
@@ -215,8 +210,7 @@ elif st.session_state.login_status == "student":
                 veri_kaydet(data)
                 st.session_state.kutlama = "kar"
                 st.rerun()
-            else:
-                st.error("Lütfen deyim veya atasözü adını boş bırakmayın!")
+            else: st.error("Lütfen deyim veya atasözü adını boş bırakmayın!")
 
         if current_data["deyimler"]:
             for idx, d in enumerate(current_data["deyimler"]):
@@ -285,7 +279,9 @@ elif st.session_state.login_status == "teacher":
         st.subheader("✉️ Öğrenci Mesaj ve Hatırlatma Yönetimi")
         mesaj_hedefi = st.selectbox("Mesaj Kimlere Gitsin?", ["Tüm Sınıfa (Genel Duyuru) 📢", "Belirli Bir Öğrenciye Özel 🔒"])
         mesaj_metni = st.text_area("Mesajınızı Yazın:")
-        if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒": {hedef_ogr = st.selectbox("Öğrenci Seçin:", list(data["ogrenciler"].keys()))}
+        # 🛠️ SÖZ DİZİMİ HATASI DÜZELTİLDİ: Süslü parantezler kaldırılarak Python standart if bloğuna çevrildi
+        if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒": 
+            hedef_ogr = st.selectbox("Öğrenci Seçin:", list(data["ogrenciler"].keys()))
         if st.button("Mesajı Gönder"):
             if mesaj_metni.strip():
                 obj = {"tarih": datetime.now().strftime("%d.%m.%Y %H:%M"), "mesaj": mesaj_metni.strip()}
