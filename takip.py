@@ -9,7 +9,7 @@ import urllib.parse
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
 # ==============================================================================
-# ⚠️ 1. ADIMDA KOPYALADIĞINIZ GOOGLE APPS SCRIPT WEB APP URL'SİNİ BURAYA YAPIŞTIRIN
+# ⚠️ GÜNCEL GOOGLE APPS SCRIPT WEB APP URL'NİZ
 # ==============================================================================
 API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
 
@@ -167,18 +167,19 @@ elif st.session_state.login_status == "student":
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
         st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
         
-        # 🛠️ GÜNCELLEME: Form verilerinin buluta anlık kilitlenmesi sağlandı
+        # 🛠️ GÜNCELLEME 1: Form içi kaydetme işlemi tamamen form dışı tetikleyici ile zırhlandı
         with st.form("kitap_form", clear_on_submit=True):
             k_ad = st.text_input("Okuduğun Kitabın Adı")
             k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50)
             k_foto = st.file_uploader("📝 Okuma Defteri Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"])
-            if st.form_submit_button("Kitap Girişini Kaydet"):
-                if k_ad:
-                    foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto else ""
-                    current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
-                    veri_kaydet(data) # Form tetiklendiğinde buluta yazar
-                    st.session_state.kutlama = "kar"
-                    st.rerun()
+            submit_kitap = st.form_submit_button("Kitap Girişini Kaydet")
+            
+        if submit_kitap and k_ad:
+            foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto is not None else ""
+            current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
+            veri_kaydet(data)
+            st.session_state.kutlama = "kar"
+            st.rerun()
 
         if current_data["kitaplar"]:
             for idx, k in enumerate(current_data["kitaplar"]):
@@ -199,18 +200,19 @@ elif st.session_state.login_status == "student":
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
         st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
         
-        # 🛠️ GÜNCELLEME: Form verilerinin buluta anlık kilitlenmesi sağlandı
+        # 🛠️ GÜNCELLEME 2: Form içi kaydetme işlemi tamamen form dışı tetikleyici ile zırhlandı
         with st.form("deyim_form", clear_on_submit=True):
             d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"])
             d_ad = st.text_input("Deyim / Atasözü Adı")
             d_foto = st.file_uploader("📝 Defter Sayfa Fotoğrafı", type=["jpg", "jpeg", "png"])
-            if st.form_submit_button("Deyimi Kaydet"):
-                if d_ad:
-                    dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto else ""
-                    current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
-                    veri_kaydet(data) # Form tetiklendiğinde buluta yazar
-                    st.session_state.kutlama = "kar"
-                    st.rerun()
+            submit_deyim = st.form_submit_button("Deyimi Kaydet")
+            
+        if submit_deyim and d_ad:
+            dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto is not None else ""
+            current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
+            veri_kaydet(data)
+            st.session_state.kutlama = "kar"
+            st.rerun()
 
         if current_data["deyimler"]:
             for idx, d in enumerate(current_data["deyimler"]):
