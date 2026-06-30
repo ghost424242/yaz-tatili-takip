@@ -58,7 +58,7 @@ def haftalik_durum_hesapla(ogr_veri, hafta_no):
         return "hiç yok"
     
     hafta = ogr_veri["ilerleme"][h_str]
-    fasikul_tam = all(hafta.get("fasikuller", [False]*4))
+    fasikul_tam = all(text_fasikul := hafta.get("fasikuller", [False]*4))
     kitap_tam = len(hafta.get("kitaplar", [])) >= 2
     deyim_tam = len(hafta.get("deyimler", [])) >= 3
     
@@ -173,11 +173,15 @@ elif st.session_state.login_status == "student":
         
         if st.button("Kitap Girişini Kaydet 💾", key="kitap_save_direct_btn"):
             if k_ad:
-                foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto is not None else ""
-                current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
-                veri_kaydet(data)
-                st.session_state.kutlama = "kar"
-                st.rerun()
+                # 🛠️ GÜNCELLEME 1: İlk kayıtta fotoğraf zorunluluğu
+                if k_foto is not None:
+                    foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8')
+                    current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
+                    veri_kaydet(data)
+                    st.session_state.kutlama = "kar"
+                    st.rerun()
+                else:
+                    st.error("⚠️ Lütfen defter sayfasının fotoğrafını ekleyin!")
             else: st.error("Lütfen kitap adını boş bırakmayın!")
 
         if current_data["kitaplar"]:
@@ -188,12 +192,24 @@ elif st.session_state.login_status == "student":
                     if st.button("Düzenle ✏️", key=f"edit_k_btn_{idx}"): st.session_state[f"editing_k_now_{idx}"] = True
                 with c_k3:
                     if st.button("Sil 🗑️", key=f"sil_k_{idx}"): current_data["kitaplar"].pop(idx); veri_kaydet(data); st.rerun()
+                
                 if st.session_state.get(f"editing_k_now_{idx}", False):
-                    yeni_k_ad = st.text_input("Yeni Kitap Adı", value=k['ad'], key=f"new_kad_{idx}")
-                    yeni_k_sayfa = st.number_input("Yeni Sayfa Sayısı", min_value=1, value=k['sayfa'], key=f"new_ksayfa_{idx}")
-                    if st.button("Değişiklikleri Kaydet", key=f"edit_save_k_change_{idx}"):
-                        current_data["kitaplar"][idx]["ad"] = yeni_k_ad; current_data["kitaplar"][idx]["sayfa"] = yeni_k_sayfa
-                        veri_kaydet(data); st.session_state[f"editing_k_now_{idx}"] = False; st.rerun()
+                    with st.container():
+                        st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
+                        yeni_k_ad = st.text_input("Yeni Kitap Adı", value=k['ad'], key=f"new_kad_{idx}")
+                        yeni_k_sayfa = st.number_input("Yeni Sayfa Sayısı", min_value=1, value=k['sayfa'], key=f"new_ksayfa_{idx}")
+                        # 🛠️ GÜNCELLEME 2: Düzenleme alanına fotoğraf yükleyici eklendi
+                        yeni_k_foto = st.file_uploader("Yeni Defter Sayfası Fotoğrafı (Değiştirmek istemiyorsanız boş bırakın)", type=["jpg", "jpeg", "png"], key=f"new_kfoto_up_{idx}")
+                        
+                        if st.button("Değişiklikleri Kaydet", key=f"edit_save_k_change_{idx}"):
+                            current_data["kitaplar"][idx]["ad"] = yeni_k_ad
+                            current_data["kitaplar"][idx]["sayfa"] = yeni_k_sayfa
+                            if yeni_k_foto is not None:
+                                current_data["kitaplar"][idx]["foto"] = base64.b64encode(yeni_k_foto.read()).decode('utf-8')
+                            veri_kaydet(data)
+                            st.session_state[f"editing_k_now_{idx}"] = False
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
 
         st.divider()
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
@@ -205,11 +221,15 @@ elif st.session_state.login_status == "student":
         
         if st.button("Deyimi Kaydet 💾", key="deyim_save_direct_btn"):
             if d_ad:
-                dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto is not None else ""
-                current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
-                veri_kaydet(data)
-                st.session_state.kutlama = "kar"
-                st.rerun()
+                # 🛠️ GÜNCELLEME 3: İlk kayıtta fotoğraf zorunluluğu
+                if d_foto is not None:
+                    dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8')
+                    current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
+                    veri_kaydet(data)
+                    st.session_state.kutlama = "kar"
+                    st.rerun()
+                else:
+                    st.error("⚠️ Lütfen defter sayfasının fotoğrafını ekleyin!")
             else: st.error("Lütfen deyim veya atasözü adını boş bırakmayın!")
 
         if current_data["deyimler"]:
@@ -220,12 +240,24 @@ elif st.session_state.login_status == "student":
                     if st.button("Düzenle ✏️", key=f"edit_d_btn_{idx}"): st.session_state[f"editing_d_now_{idx}"] = True
                 with c_d3:
                     if st.button("Sil 🗑️", key=f"sil_d_{idx}"): current_data["deyimler"].pop(idx); veri_kaydet(data); st.rerun()
+                
                 if st.session_state.get(f"editing_d_now_{idx}", False):
-                    yeni_d_tur = st.selectbox("Yeni Tür", ["Deyim", "Atasözü"], index=0 if d.get('tur','Deyim')=="Deyim" else 1, key=f"new_dtur_{idx}")
-                    yeni_d_ad = st.text_input("Yeni Adı", value=d['ad'], key=f"new_dad_{idx}")
-                    if st.button("Değişiklikleri Kaydet", key=f"edit_save_d_change_{idx}"):
-                        current_data["deyimler"][idx]["tur"] = yeni_d_tur; current_data["deyimler"][idx]["ad"] = yeni_d_ad
-                        veri_kaydet(data); st.session_state[f"editing_d_now_{idx}"] = False; st.rerun()
+                    with st.container():
+                        st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
+                        yeni_d_tur = st.selectbox("Yeni Tür", ["Deyim", "Atasözü"], index=0 if d.get('tur','Deyim')=="Deyim" else 1, key=f"new_dtur_{idx}")
+                        yeni_d_ad = st.text_input("Yeni Adı", value=d['ad'], key=f"new_dad_{idx}")
+                        # 🛠️ GÜNCELLEME 4: Düzenleme alanına fotoğraf yükleyici eklendi
+                        yeni_d_foto = st.file_uploader("Yeni Defter Fotoğrafı (Değiştirmek istemiyorsanız boş bırakın)", type=["jpg", "jpeg", "png"], key=f"new_dfoto_up_{idx}")
+                        
+                        if st.button("Değişiklikleri Kaydet", key=f"edit_save_d_change_{idx}"):
+                            current_data["deyimler"][idx]["tur"] = yeni_d_tur
+                            current_data["deyimler"][idx]["ad"] = yeni_d_ad
+                            if yeni_d_foto is not None:
+                                current_data["deyimler"][idx]["foto"] = base64.b64encode(yeni_d_foto.read()).decode('utf-8')
+                            veri_kaydet(data)
+                            st.session_state[f"editing_d_now_{idx}"] = False
+                            st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
 
     elif menu == "📊 Geçmiş Ödevlerim":
         for h_no in sorted([int(x) for x in ogr_veri["ilerleme"].keys()]):
