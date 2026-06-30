@@ -138,7 +138,7 @@ elif st.session_state.login_status == "student":
     if st.session_state.kutlama == "balon": st.balloons(); st.session_state.kutlama = None
     elif st.session_state.kutlama == "kar": st.snow(); st.session_state.kutlama = None
 
-    if haftalik_durum_hesapla(ogr_veri, su_anki_hafta) == "yildiz":
+    if haftalik_durum_hesapla(ogr_veri, su_anki_transform := su_anki_hafta) == "yildiz":
         st.success(f"⭐ **Tebrikler! {su_anki_hafta}. Hafta görevlerini başarıyla tamamladın ve Haftanın Yıldızı oldun!** ⭐")
 
     yildizlar = "".join(["⭐" if haftalik_durum_hesapla(ogr_veri, h) == "yildiz" else "💔" if haftalik_durum_hesapla(ogr_veri, h) == "yarim" else "🤍" for h in range(1, 11)])
@@ -235,7 +235,6 @@ elif st.session_state.login_status == "student":
                 h_veri = ogr_veri["ilerleme"][str(h_no)]
                 for f_idx, b_dur in enumerate(h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
                 
-                # 🛠️ GÜNCELLEME 1: Öğrenci geçmiş korumalı try-except blokları eklendi
                 for k in h_veri.get("kitaplar", []):
                     st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)")
                     if k.get("foto"):
@@ -313,7 +312,6 @@ elif st.session_state.login_status == "teacher":
                 detay_h_veri = o_veri["ilerleme"][str(h_no)]
                 for f_idx, b_dur in enumerate(detay_h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
                 
-                # 🛠️ GÜNCELLEME 2: Öğretmen analizi korumalı try-except blokları eklendi
                 for k in detay_h_veri.get("kitaplar", []):
                     st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)")
                     if k.get("foto"):
