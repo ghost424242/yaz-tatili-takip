@@ -9,9 +9,9 @@ import urllib.parse
 st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="⭐", layout="wide")
 
 # ==============================================================================
-# ⚠️ GOOGLE APPS SCRIPT WEB APP URL'NİZ
+# ⚠️ 1. ADIMDA KOPYALADIĞINIZ GOOGLE APPS SCRIPT WEB APP URL'SİNİ BURAYA YAPIŞTIRIN
 # ==============================================================================
-API_URL = "https://script.google.com/macros/s/AKfycbwYyH9CqN416D4SInNmsiV2e_w14R580-X9w6nJ9gG6y256b-p_mE01980v5pE01M9v/exec" # Kendi linkinizi buraya ekleyin
+API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
 
 def veri_yukle():
     if "canli_bulut_db" not in st.session_state:
@@ -147,6 +147,7 @@ elif st.session_state.login_status == "student":
     menu = st.sidebar.radio("Menü", ["🎯 Bu Haftaki Görevlerim", "📊 Geçmiş Ödevlerim", f"✉️ Mesajlar ({toplam_mesaj_sayisi})", "🚪 Çıkış Yap"])
 
     if menu == "🎯 Bu Haftaki Görevlerim":
+        st.markdown("### 📅 Ödev Girişi Yapılacak Hafta")
         secilen_calisma_haftasi = st.selectbox("Çalışmasını eklemek veya tamamlamak istediğiniz haftayı seçin:", list(range(1, 11)), index=su_anki_hafta-1)
         h_str = str(secilen_calisma_haftasi)
         if h_str not in ogr_veri["ilerleme"]: ogr_veri["ilerleme"][h_str] = {"fasikuller": [False]*4, "kitaplar": [], "deyimler": []}
@@ -166,7 +167,7 @@ elif st.session_state.login_status == "student":
         st.subheader(f"📖 {secilen_calisma_haftasi}. Hafta Kitap Okuma Takibi (En Az 2 Kitap)")
         st.write(f"Seçilen haftada okunan kitap sayısı: **{len(current_data.get('kitaplar', []))}**")
         
-        # SİHİRLİ DÜZELTME 1: Kitap form verileri kalıcı bulut tabanına bağlandı
+        # 🛠️ GÜNCELLEME: Form verilerinin buluta anlık kilitlenmesi sağlandı
         with st.form("kitap_form", clear_on_submit=True):
             k_ad = st.text_input("Okuduğun Kitabın Adı")
             k_sayfa = st.number_input("Sayfa Sayısı", min_value=1, value=50)
@@ -175,7 +176,7 @@ elif st.session_state.login_status == "student":
                 if k_ad:
                     foto_b64 = base64.b64encode(k_foto.read()).decode('utf-8') if k_foto else ""
                     current_data["kitaplar"].append({"ad": k_ad, "sayfa": k_sayfa, "foto": foto_b64, "tarih": str(datetime.now().date())})
-                    veri_kaydet(data) # E-tabloya kilitlendi
+                    veri_kaydet(data) # Form tetiklendiğinde buluta yazar
                     st.session_state.kutlama = "kar"
                     st.rerun()
 
@@ -198,7 +199,7 @@ elif st.session_state.login_status == "student":
         st.subheader(f"🗣️ {secilen_calisma_haftasi}. Hafta Deyim ve Atasözü Girişi (En Az 3 Adet)")
         st.write(f"Seçilen haftada öğrenilen deyim/atasözü sayısı: **{len(current_data.get('deyimler', []))}**")
         
-        # SİHİRLİ DÜZELTME 2: Deyim form verileri kalıcı bulut tabanına bağlandı
+        # 🛠️ GÜNCELLEME: Form verilerinin buluta anlık kilitlenmesi sağlandı
         with st.form("deyim_form", clear_on_submit=True):
             d_tur = st.selectbox("Tür", ["Deyim", "Atasözü"])
             d_ad = st.text_input("Deyim / Atasözü Adı")
@@ -207,7 +208,7 @@ elif st.session_state.login_status == "student":
                 if d_ad:
                     dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8') if d_foto else ""
                     current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
-                    veri_kaydet(data) # E-tabloya kilitlendi
+                    veri_kaydet(data) # Form tetiklendiğinde buluta yazar
                     st.session_state.kutlama = "kar"
                     st.rerun()
 
