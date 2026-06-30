@@ -59,8 +59,8 @@ def haftalik_durum_hesapla(ogr_veri, hafta_no):
     
     hafta = ogr_veri["ilerleme"][h_str]
     fasikul_tam = all(hafta.get("fasikuller", [False]*4))
-    kitap_tam = len(headless_kitaplar := hafta.get("kitaplar", [])) >= 2
-    deyim_tam = len(headless_deyimler := hafta.get("deyimler", [])) >= 3
+    kitap_tam = len(hafta.get("kitaplar", [])) >= 2
+    deyim_tam = len(hafta.get("deyimler", [])) >= 3
     
     if fasikul_tam and kitap_tam and deyim_tam:
         return "yildiz"
@@ -234,8 +234,19 @@ elif st.session_state.login_status == "student":
                     ogr_veri["ilerleme"].pop(str(h_no)); veri_kaydet(data); st.rerun()
                 h_veri = ogr_veri["ilerleme"][str(h_no)]
                 for f_idx, b_dur in enumerate(h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
-                for k in h_veri.get("kitaplar", []): st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)"); st.image(base64.b64decode(k["foto"]), width=280) if k.get("foto") else None
-                for d in h_veri.get("deyimler", []): st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})"); st.image(base64.b64decode(d["foto"]), width=280) if d.get("foto") else None
+                
+                # 🛠️ GÜNCELLEME 1: Öğrenci geçmiş korumalı try-except blokları eklendi
+                for k in h_veri.get("kitaplar", []):
+                    st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)")
+                    if k.get("foto"):
+                        try: st.image(base64.b64decode(k["foto"]), width=280)
+                        except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
+                        
+                for d in h_veri.get("deyimler", []):
+                    st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})")
+                    if d.get("foto"):
+                        try: st.image(base64.b64decode(d["foto"]), width=280)
+                        except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
 
     elif menu.startswith("✉️ Mesajlar"):
         st.session_state.mesaj_okundu = True
@@ -279,7 +290,6 @@ elif st.session_state.login_status == "teacher":
         st.subheader("✉️ Öğrenci Mesaj ve Hatırlatma Yönetimi")
         mesaj_hedefi = st.selectbox("Mesaj Kimlere Gitsin?", ["Tüm Sınıfa (Genel Duyuru) 📢", "Belirli Bir Öğrenciye Özel 🔒"])
         mesaj_metni = st.text_area("Mesajınızı Yazın:")
-        # 🛠️ SÖZ DİZİMİ HATASI DÜZELTİLDİ: Süslü parantezler kaldırılarak Python standart if bloğuna çevrildi
         if mesaj_hedefi == "Belirli Bir Öğrenciye Özel 🔒": 
             hedef_ogr = st.selectbox("Öğrenci Seçin:", list(data["ogrenciler"].keys()))
         if st.button("Mesajı Gönder"):
@@ -302,8 +312,19 @@ elif st.session_state.login_status == "teacher":
             with st.expander(f"📅 {h_no}. Hafta Kayıtları", expanded=True):
                 detay_h_veri = o_veri["ilerleme"][str(h_no)]
                 for f_idx, b_dur in enumerate(detay_h_veri.get("fasikuller", [False]*4)): st.write(f"- {KITAP_ISIMLERI[f_idx]}: {'✅' if b_dur else '❌'}")
-                for k in detay_h_veri.get("kitaplar", []): st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)"); st.image(base64.b64decode(k["foto"]), width=320) if k.get("foto") else None
-                for d in detay_h_veri.get("deyimler", []): st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})"); st.image(base64.b64decode(d["foto"]), width=320) if d.get("foto") else None
+                
+                # 🛠️ GÜNCELLEME 2: Öğretmen analizi korumalı try-except blokları eklendi
+                for k in detay_h_veri.get("kitaplar", []):
+                    st.write(f"- 📖 **{k['ad']}** ({k.get('sayfa', 50)} S.)")
+                    if k.get("foto"):
+                        try: st.image(base64.b64decode(k["foto"]), width=320)
+                        except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
+                        
+                for d in detay_h_veri.get("deyimler", []):
+                    st.write(f"- 💡 **{d['ad']}** ({d.get('tur', 'Deyim')})")
+                    if d.get("foto"):
+                        try: st.image(base64.b64decode(d["foto"]), width=320)
+                        except: st.caption("📸 Resim yükleniyor veya formatı hatalı.")
 
     elif menu == "📋 Sınıf Listesi & Şifreler":
         for isim in list(data["ogrenciler"].keys()):
