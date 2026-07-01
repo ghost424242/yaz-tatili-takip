@@ -292,10 +292,8 @@ elif st.session_state.login_status == "teacher":
         data["ayarlar"]["tatil_baslangic"] = str(t_baslangic)
         veri_kaydet(data); st.rerun()
         
-    # MENU SEÇENEKLERİNE "✉️ Gönderilen Mesaj Geçmişi" EKLENDİ
     MENU_LISTESI = ["📊 Haftalık Özet Raporu", "🔍 Öğrenci Detaylı Analizi", "✉️ Mesaj Gönderme Paneli", "📋 Gönderilen Mesaj Geçmişi", "📋 Sınıf Listesi & Şifreler", "➕ Toplu Öğrenci Ekle", "🚪 Çıkış Yap"]
     
-    # Varsayılan menü kontrolü güvenlik uyarısı koruması
     if st.session_state.ogretmen_alt_menu not in MENU_LISTESI:
         st.session_state.ogretmen_alt_menu = "📊 Haftalık Özet Raporu"
         
@@ -334,33 +332,68 @@ elif st.session_state.login_status == "teacher":
                 else: data["ogrenciler"][hedef_ogr]["mesajlar"].append(obj)
                 veri_kaydet(data); st.success("Mesaj başarıyla iletildi!")
 
-    # 🛠️ GÜNCELLEME: "✉️ Gönderilen Mesaj Geçmişi" MENÜSÜ ALTYAPISI EKLENDİ
+    # 🛠️ GÜNCELLEME: MESAJ SİLME VE DÜZENLEME DESTEĞİ EKLENMİŞ GÖREVLİ GEÇMİŞ PANELİ
     elif menu == "📋 Gönderilen Mesaj Geçmişi":
-        st.subheader("📋 Gönderilen Mesajların Geçmişi")
-        
+        st.subheader("📋 Gönderilen Mesajların Yönetimi & Geçmişi")
         sekme1, sekme2 = st.tabs(["📢 Genel Sınıf Duyuruları", "🔒 Öğrencilere Özel Mesajlar"])
         
         with sekme1:
-            st.markdown("#### Tüm Sınıfa Ortak Gönderilen Mesajlar")
+            st.markdown("#### Sınıf Geneline Ortak Gönderilen Duyurular")
             if data.get("genel_mesajlar"):
-                for m in reversed(data["genel_mesajlar"]):
+                for idx, m in enumerate(list(data["genel_mesajlar"])):
                     st.markdown(f"<div class='mesaj-kutusu'><b>📅 Tarih/Saat:</b> {m['tarih']}<br><b>💬 Duyuru:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
-            else:
-                st.caption("Henüz sınıf geneline gönderilmiş ortak duyuru bulunmuyor.")
+                    
+                    c1, c2 = st.columns([1, 6])
+                    with c1:
+                        if st.button("Sil 🗑️", key=f"del_genel_msg_{idx}"):
+                            data["genel_mesajlar"].pop(idx)
+                            veri_kaydet(data); st.rerun()
+                    with c2:
+                        if st.button("Düzenle ✏️", key=f"edit_genel_msg_{idx}"):
+                            st.session_state[f"editing_genel_msg_{idx}"] = True
+                            
+                    if st.session_state.get(f"editing_genel_msg_{idx}", False):
+                        yeni_duyuru_metni = st.text_area("Mesajı Düzenleyin:", value=m['mesaj'], key=f"txt_genel_msg_{idx}")
+                        if st.button("Duyuruyu Güncelle ✅", key=f"save_genel_msg_{idx}"):
+                            data["genel_mesajlar"][idx]["mesaj"] = yeni_duyuru_metni.strip()
+                            veri_kaydet(data)
+                            st.session_state[f"editing_genel_msg_{idx}"] = False
+                            st.rerun()
+                    st.divider()
+            else: st.caption("Henüz sınıf geneline gönderilmiş ortak duyuru bulunmuyor.")
                 
         with sekme2:
             st.markdown("#### Öğrencilerin Şahsına Özel Gönderilen Hatırlatmalar")
             ozel_mesaj_var_mi = False
             
-            # Tüm öğrencilerin içindeki mesajları tek bir havuzda tarayıp kronolojik gösterme
             for ogr_isim, ogr_kutu in data["ogrenciler"].items():
                 if ogr_kutu.get("mesajlar"):
                     ozel_mesaj_var_mi = True
-                    for m in reversed(ogr_kutu["mesajlar"]):
-                        st.markdown(f"<div class='mesaj-kutusu' style='border-left-color: #e67e22;'><b>🎒 Öğrenci:</b> {ogr_isim}<br><b>📅 Tarih/Saat:</b> {m['tarih']}<br><b>💬 Özel Mesaj:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"##### 🎒 {ogr_isim} Öğrencisine Ait Mesajlar")
+                    
+                    for idx, m in enumerate(list(ogr_kutu["mesajlar"])):
+                        st.markdown(f"<div class='mesaj-kutusu' style='border-left-color: #e67e22;'><b>📅 Tarih/Saat:</b> {m['tarih']}<br><b>💬 Hatırlatma:</b> {m['mesaj']}</div>", unsafe_allow_html=True)
+                        
+                        c1, c2 = st.columns([1, 6])
+                        with c1:
+                            if st.button("Sil 🗑️", key=f"del_ozel_{ogr_isim}_{idx}"):
+                                data["ogrenciler"][ogr_isim]["mesajlar"].pop(idx)
+                                veri_kaydet(data); st.rerun()
+                        with c2:
+                            if st.button("Düzenle ✏️", key=f"edit_ozel_{ogr_isim}_{idx}"):
+                                st.session_state[f"editing_ozel_{ogr_isim}_{idx}"] = True
+                                
+                        if st.session_state.get(f"editing_ozel_{ogr_isim}_{idx}", False):
+                            yeni_ozel_metni = st.text_area("Özel Mesajı Düzenleyin:", value=m['mesaj'], key=f"txt_ozel_{ogr_isim}_{idx}")
+                            if st.button("Özel Mesajı Güncelle ✅", key=f"save_ozel_{ogr_isim}_{idx}"):
+                                data["ogrenciler"][ogr_isim]["mesajlar"][idx]["mesaj"] = yeni_ozel_metni.strip()
+                                veri_kaydet(data)
+                                st.session_state[f"editing_ozel_{ogr_isim}_{idx}"] = False
+                                st.rerun()
+                        st.write("")
+                    st.divider()
             
-            if not ozel_mesaj_var_mi:
-                st.caption("Henüz hiçbir öğrenciye özel hatırlatma mesajı gönderilmemiş.")
+            if not ozel_mesaj_var_mi: st.caption("Henüz hiçbir öğrenciye özel hatırlatma mesajı gönderilmemiş.")
 
     elif menu == "🔍 Öğrenci Detaylı Analizi":
         ogr_secenekleri = list(data["ogrenciler"].keys())
