@@ -11,7 +11,7 @@ st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="�
 # ==============================================================================
 # ⚠️ GÜNCEL GOOGLE APPS SCRIPT WEB APP URL'NİZ
 # ==============================================================================
-API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbynuQ7u9Xz3waatjKLFa_KuwhPhHmzDCyVR7y7Zo5uDvy4gpppYVvZJvnp_ZEFUfTBe/exec"
 
 def veri_yukle():
     if "canli_bulut_db" not in st.session_state:
