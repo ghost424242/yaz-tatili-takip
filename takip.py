@@ -292,7 +292,7 @@ elif st.session_state.login_status == "teacher":
         data["ayarlar"]["tatil_baslangic"] = str(t_baslangic)
         veri_kaydet(data); st.rerun()
         
-    MENU_LISTESI = ["📊 Haftalık Özet Raporu", "🔍 Öğrenci Detaylı Analizi", "✉️ Mesaj Gönderme Paneli", "📋 Gönderilen Mesaj Geçmişi", "📋 Sınıf Listesi & Şifreler", "➕ Toplu Öğrenci Ekle", "🚪 Çıkış Yap"]
+    MENU_LISTESI = ["📊 Haftalık Özet Raporu", "🔍 Öğrenci Detaylı Analizi", "✉️ Mesaj Gönderme Paneli", "📋 Sınıf Listesi & Şifreler", "➕ Toplu Öğrenci Ekle", "🚪 Çıkış Yap"]
     
     if st.session_state.ogretmen_alt_menu not in MENU_LISTESI:
         st.session_state.ogretmen_alt_menu = "📊 Haftalık Özet Raporu"
@@ -392,7 +392,7 @@ elif st.session_state.login_status == "teacher":
                         st.write("")
                     st.divider()
             
-            if not ozel_mesaj_var_mi: st.caption("Henüz hiçbir öğrenciye özel hatırlatma mesajı gönderilmemiş.")
+            if not ozel_mesaj_var_mi: st.caption("Henüz hiçbir studentöğrenciye özel hatırlatma mesajı gönderilmemiş.")
 
     elif menu == "🔍 Öğrenci Detaylı Analizi":
         ogr_secenekleri = list(data["ogrenciler"].keys())
@@ -450,7 +450,6 @@ elif st.session_state.login_status == "teacher":
         yeni_liste = st.text_area("Örnek: Ahmet Yılmaz,123")
         if st.button("Sınıf Listesine Ekle", key="mass_save_students"):
             if yeni_liste:
-                # 🛡️ EXCEL GİZLİ KARAKTER SÜPÜRGESİ: Satır satır temizlik yapılıyor
                 for satir in yeni_liste.split("\n"):
                     cleaned_satir = satir.replace("\r", "").strip()
                     if "," in cleaned_satir:
