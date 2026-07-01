@@ -11,7 +11,7 @@ st.set_page_config(page_title="Yaz Tatili Yıldız Takip Sistemi", page_icon="�
 # ==============================================================================
 # ⚠️ GÜNCEL GOOGLE APPS SCRIPT WEB APP URL'NİZ
 # ==============================================================================
-API_URL = "https://script.google.com/macros/s/AKfycbynuQ7u9Xz3waatjKLFa_KuwhPhHmzDCyVR7y7Zo5uDvy4gpppYVvZJvnp_ZEFUfTBe/exec"
+API_URL = "https://script.google.com/macros/s/AKfycbwnjldQgtcFdv3kQ8aZupBq6cWbUeyGnBxhJtVxjzUDxiByFwEMVDqCRIOygQSqlED1/exec"
 
 def veri_yukle():
     if "canli_bulut_db" not in st.session_state:
@@ -223,6 +223,7 @@ elif st.session_state.login_status == "student":
             if d_ad:
                 if d_foto is not None:
                     dfoto_b64 = base64.b64encode(d_foto.read()).decode('utf-8')
+                    # 🛠️ NİHAİ DÜZELTME: Deyimler artık kesinlikle kendi listesine kaydoluyor!
                     current_data["deyimler"].append({"tur": d_tur, "ad": d_ad, "foto": dfoto_b64})
                     veri_kaydet(data)
                     st.session_state.kutlama = "kar"
