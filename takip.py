@@ -19,7 +19,7 @@ def veri_yukle():
             req = urllib.request.Request(API_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req) as response:
                 ham_veri = response.read().decode('utf-8').strip()
-                if "#" in ham_veri or "Error" in ham_veri or not ham_veri:
+                if not ham_veri or ham_veri.startswith("Error") or "Internal Server Error" in ham_veri:
                     raise Exception("BozukVeri")
                 st.session_state.canli_bulut_db = json.loads(ham_veri)
         except:
@@ -332,7 +332,6 @@ elif st.session_state.login_status == "teacher":
                 else: data["ogrenciler"][hedef_ogr]["mesajlar"].append(obj)
                 veri_kaydet(data); st.success("Mesaj başarıyla iletildi!")
 
-    # 🛠️ GÜNCELLEME: MESAJ SİLME VE DÜZENLEME DESTEĞİ EKLENMİŞ GÖREVLİ GEÇMİŞ PANELİ
     elif menu == "📋 Gönderilen Mesaj Geçmişi":
         st.subheader("📋 Gönderilen Mesajların Yönetimi & Geçmişi")
         sekme1, sekme2 = st.tabs(["📢 Genel Sınıf Duyuruları", "🔒 Öğrencilere Özel Mesajlar"])
@@ -451,10 +450,12 @@ elif st.session_state.login_status == "teacher":
         yeni_liste = st.text_area("Örnek: Ahmet Yılmaz,123")
         if st.button("Sınıf Listesine Ekle", key="mass_save_students"):
             if yeni_liste:
+                # 🛡️ EXCEL GİZLİ KARAKTER SÜPÜRGESİ: Satır satır temizlik yapılıyor
                 for satir in yeni_liste.split("\n"):
-                    if "," in satir:
-                        isim, sifre = satir.split(",")
+                    cleaned_satir = satir.replace("\r", "").strip()
+                    if "," in cleaned_satir:
+                        isim, sifre = cleaned_satir.split(",")
                         data["ogrenciler"][isim.strip()] = {"sifre": sifre.strip(), "ilerleme": {}, "mesajlar": []}
-                veri_kaydet(data); st.success("Sınıf listesi eklendi!"); st.rerun()
+                veri_kaydet(data); st.success("Sınıf listesi temizlenerek eklendi!"); st.rerun()
 
     elif menu == "🚪 Çıkış Yap": st.session_state.login_status = None; st.rerun()
